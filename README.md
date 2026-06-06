@@ -1,73 +1,73 @@
 # GreekDir
 
 <p align="center">
-  <strong>Analizador de disco con interfaz moderna</strong>
+  <strong>Disk analyzer with a modern interface</strong>
 </p>
 
 <p align="center">
-  Una aplicación de escritorio estilo WinDirStat con una interfaz limpia y moderna inspirada en Claude.
-  Visualiza el uso de espacio en tu disco con un treemap interactivo y una lista detallada de archivos.
+  A WinDirStat-style desktop application with a clean, modern interface inspired by Claude.
+  Visualize disk space usage with an interactive treemap and a detailed file list.
 </p>
 
 ---
 
-## ✨ Características
+## ✨ Features
 
-- ��️ **Treemap interactivo** — Visualización de bloques proporcionales al tamaño de archivos
-- 📋 **Vista de lista** — Archivos y carpetas ordenados por tamaño con barras de progreso
-- 🎨 **Colores por tipo** — Cada extensión de archivo tiene un color diferente
-- 📂 **Navegación profunda** — Haz clic para explorar subcarpetas
-- 📊 **Panel de detalles** — Información completa del archivo seleccionado
-- ⚡ **Escaneo rápido** — Análisis asíncrono con indicador de progreso
-- 🎯 **Interfaz moderna** — Diseño limpio con esquinas redondeadas, sombras suaves y tipografía elegante
+- 🗂️ **Interactive treemap** — Block visualization proportional to file size
+- 📋 **List view** — Files and folders sorted by size with progress bars
+- 🎨 **Type-based colors** — Each file extension has a different color
+- 📂 **Deep navigation** — Click to explore subfolders
+- 📊 **Detail panel** — Complete information for the selected file
+- ⚡ **Fast scanning** — Asynchronous analysis with progress indicator
+- 🎯 **Modern interface** — Clean design with rounded corners, soft shadows, and elegant typography
 
 ## 🛠️ Tech Stack
 
-- **Electron** — App de escritorio multiplataforma
-- **React 18** — UI declarativa con hooks
-- **TypeScript** — Tipado estático
-- **Vite** — Build tool ultra rápido
-- **Tailwind CSS** — Estilos utility-first
-- **D3.js** — Visualización del treemap
+- **Electron** — Cross-platform desktop app
+- **React 18** — Declarative UI with hooks
+- **TypeScript** — Static typing
+- **Vite** — Ultra-fast build tool
+- **Tailwind CSS** — Utility-first styling
+- **D3.js** — Treemap visualization
 
-## 🚀 Desarrollo
+## 🚀 Development
 
-### Prerrequisitos
+### Prerequisites
 
 - Node.js >= 18
 - npm >= 9
 
-### Instalación
+### Installation
 
 ```bash
 npm install
 ```
 
-### Ejecutar en modo desarrollo
+### Run in development mode
 
 ```bash
 npm run dev
 ```
 
-Esto abre la app de Electron con hot-reload habilitado.
+This opens the Electron app with hot reload enabled.
 
-### Build para producción
+### Production build
 
 ```bash
 npm run build
 ```
 
-Genera el ejecutable para tu plataforma en la carpeta `dist/`.
+This generates the executable for your platform in the `dist/` folder.
 
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
 GreekDir/
-├── electron/           # Código del proceso principal de Electron
-│   ├── main.ts         # Ventana principal, IPC handlers, scanner
-│   └── preload.ts      # Bridge seguro entre main y renderer
-├── src/                # Código del frontend (React)
-│   ├── components/     # Componentes UI
+├── electron/           # Electron main process code
+│   ├── main.ts         # Main window, IPC handlers, scanner
+│   └── preload.ts      # Secure bridge between main and renderer
+├── src/                # Frontend code (React)
+│   ├── components/     # UI components
 │   │   ├── Header.tsx
 │   │   ├── WelcomeScreen.tsx
 │   │   ├── ScanningView.tsx
@@ -75,12 +75,12 @@ GreekDir/
 │   │   ├── Treemap.tsx
 │   │   ├── FileList.tsx
 │   │   └── DetailPanel.tsx
-│   ├── utils/          # Utilidades
-│   │   ├── colors.ts   # Mapa de colores por extensión
-│   │   └── format.ts   # Formateo de tamaños
-│   ├── App.tsx         # Componente raíz
+│   ├── utils/          # Utilities
+│   │   ├── colors.ts   # Extension-to-color map
+│   │   └── format.ts   # Size formatting
+│   ├── App.tsx         # Root component
 │   ├── main.tsx        # Entry point
-│   ├── index.css       # Estilos globales
+│   ├── index.css       # Global styles
 │   └── types.ts        # TypeScript interfaces
 ├── index.html
 ├── package.json
@@ -89,16 +89,16 @@ GreekDir/
 └── tsconfig.json
 ```
 
-## 📸 Diseño
+## 📸 Design
 
-La interfaz sigue un estilo minimalista con:
-- Fondo crema suave (`#FAF9F7`)
-- Cards con bordes sutiles y sombras mínimas
-- Esquinas redondeadas generosas
-- Tipografía Inter
-- Paleta de colores cálida y neutra
-- Acentos en tonos tierra/cobre
+The interface follows a minimalist style with:
+- Soft cream background (`#FAF9F7`)
+- Cards with subtle borders and minimal shadows
+- Generous rounded corners
+- Inter typography
+- Warm, neutral color palette
+- Earth/copper accent tones
 
-## 📄 Licencia
+## 📄 License
 
 MIT
