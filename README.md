@@ -59,6 +59,27 @@ npm run build
 
 This generates the executable for your platform in the `dist/` folder.
 
+### Windows-specific builds
+
+```bash
+npm run build:win
+```
+
+Builds a Windows installer (`NSIS`) in the `release/` folder.
+
+```bash
+npm run build:store
+```
+
+Builds a Microsoft Store package (`APPX`) in the `release/` folder.
+Before running this command, set:
+
+- `GREEKDIR_IDENTITY_NAME`
+- `GREEKDIR_PUBLISHER`
+- `GREEKDIR_PUBLISHER_DISPLAY_NAME`
+
+See `/docs/microsoft-store-checklist.md` for the complete publication process.
+
 ## 📁 Project Structure
 
 ```
@@ -98,6 +119,17 @@ The interface follows a minimalist style with:
 - Inter typography
 - Warm, neutral color palette
 - Earth/copper accent tones
+
+## 📦 Windows release docs
+
+- Scope v1.0: `docs/windows-v1-scope.md`
+- Microsoft Store checklist: `docs/microsoft-store-checklist.md`
+- Windows validation runbook: `docs/windows-validation.md`
+- Partner Center step-by-step: `docs/partner-center-step-by-step.md`
+- Privacy policy: `docs/privacy-policy.md`
+- Support channels: `docs/support.md`
+- Change history: `CHANGELOG.md`
+- Product roadmap: `ROADMAP.md`
 
 ## 📄 License
 
