@@ -1,0 +1,20 @@
+{
+  "win": {
+    "target": [
+      "appx"
+    ],
+    "artifactName": "${productName}-Store-${version}.${ext}"
+  },
+  "appx": {
+    "applicationId": "GreekDir",
+    "identityName": "${env.GREEKDIR_IDENTITY_NAME}",
+    "publisher": "${env.GREEKDIR_PUBLISHER}",
+    "publisherDisplayName": "${env.GREEKDIR_PUBLISHER_DISPLAY_NAME}",
+    "displayName": "GreekDir",
+    "backgroundColor": "#FAF9F7",
+    "languages": [
+      "en-US",
+      "es-ES"
+    ]
+  }
+}
