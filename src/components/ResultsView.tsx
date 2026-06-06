@@ -21,6 +21,12 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null)
   const [breadcrumbs, setBreadcrumbs] = useState<FileNode[]>([data])
 
+  const getBreadcrumbLabel = useCallback((node: FileNode) => {
+    if (node.name) return node.name
+    if (node.path.length <= 36) return node.path
+    return `…${node.path.slice(-35)}`
+  }, [])
+
   const handleDrillDown = useCallback((node: FileNode) => {
     if (node.isDirectory && node.children && node.children.length > 0) {
       setCurrentNode(node)
@@ -72,7 +78,7 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
                         : 'text-sand-500 hover:text-gray-700 hover:bg-cream-200'
                     }`}
                   >
-                    {node.name || node.path}
+                    {getBreadcrumbLabel(node)}
                   </button>
                 </span>
               ))}
