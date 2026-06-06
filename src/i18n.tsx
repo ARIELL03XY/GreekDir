@@ -129,7 +129,7 @@ function interpolate(
   variables: Record<string, string | number> = {}
 ): string {
   return Object.entries(variables).reduce((result, [key, value]) => {
-    return result.replaceAll(`{{${key}}}`, String(value))
+    return result.split(`{{${key}}}`).join(String(value))
   }, template)
 }
 
