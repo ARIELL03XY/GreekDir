@@ -1,6 +1,4 @@
-# Privacy Policy (Draft)
-
-> ⚠️ Borrador: reemplazar este documento por la versión legal final antes de publicar en Microsoft Store.
+# Privacy Policy
 
 GreekDir analiza archivos y carpetas en el equipo local del usuario para mostrar su uso de espacio.
 
@@ -15,6 +13,16 @@ GreekDir analiza archivos y carpetas en el equipo local del usuario para mostrar
 - No requiere cuenta de usuario.
 - No comparte datos con terceros.
 
+## Procesamiento local
+
+- El análisis se realiza localmente en el equipo del usuario.
+- GreekDir no sube resultados de escaneo a servicios externos.
+
+## Retención de datos
+
+- GreekDir no mantiene una base de datos remota de datos de usuario.
+- La información mostrada por la app corresponde al estado de archivos locales durante el uso.
+
 ## Contacto
 
-Para solicitudes de privacidad, usar el canal definido en `/docs/support.md`.
+Para solicitudes de privacidad y soporte, usar el canal definido en `/docs/support.md`.

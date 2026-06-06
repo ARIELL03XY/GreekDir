@@ -11,6 +11,7 @@
 - [ ] Ejecutar `npm run build:win`.
 - [ ] Verificar instalador en `release/`.
 - [ ] Probar instalación limpia en otra máquina Windows.
+- [ ] Registrar resultado en `/docs/windows-validation.md`.
 
 ## 3) Build para Microsoft Store (APPX)
 
@@ -38,6 +39,7 @@ npm run build:store
 - [ ] Completar metadata: descripción, capturas, categoría y keywords.
 - [ ] Definir precio y regiones.
 - [ ] Configurar clasificación por edad.
+- [ ] Seguir `/docs/partner-center-step-by-step.md`.
 
 ## 5) Cumplimiento
 

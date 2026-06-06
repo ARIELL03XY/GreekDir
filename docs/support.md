@@ -1,14 +1,14 @@
 # Support
 
-> ⚠️ TODO antes de publicar: reemplazar valores de ejemplo por contacto real de soporte.
-
 ## Soporte de GreekDir
 
-Completar este documento con los datos reales de soporte:
+Canales oficiales de soporte:
 
-- Correo de soporte: `support@example.com`
-- Sitio web: `https://example.com`
+- Repositorio: `https://github.com/arieljesuscv23/GreekDir`
 - Repositorio de issues: `https://github.com/arieljesuscv23/GreekDir/issues`
+- Contacto principal: `@arieljesuscv23` (GitHub)
+
+Si necesitas soporte, abre un issue con la plantilla de información recomendada.
 
 ## Información recomendada para reportes
 

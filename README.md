@@ -124,8 +124,10 @@ The interface follows a minimalist style with:
 
 - Scope v1.0: `/docs/windows-v1-scope.md`
 - Microsoft Store checklist: `/docs/microsoft-store-checklist.md`
-- Privacy policy draft: `/docs/privacy-policy.md`
-- Support info template: `/docs/support.md`
+- Windows validation runbook: `/docs/windows-validation.md`
+- Partner Center step-by-step: `/docs/partner-center-step-by-step.md`
+- Privacy policy: `/docs/privacy-policy.md`
+- Support channels: `/docs/support.md`
 - Change history: `/CHANGELOG.md`
 - Product roadmap: `/ROADMAP.md`
 
