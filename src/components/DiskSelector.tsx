@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DiskInfo } from '../types'
 import { formatSize } from '../utils/format'
+import { useI18n } from '../i18n'
 
 interface DiskSelectorProps {
   onSelectDisk: (diskPath: string) => void
@@ -8,6 +9,7 @@ interface DiskSelectorProps {
 }
 
 export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelectorProps) {
+  const { t } = useI18n()
   const [drives, setDrives] = useState<DiskInfo[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -24,7 +26,7 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
     return (
       <div className="flex items-center justify-center py-8">
         <div className="w-6 h-6 rounded-full border-2 border-cream-300 border-t-accent animate-spin" />
-        <span className="ml-3 text-sm text-sand-500">Detectando discos...</span>
+        <span className="ml-3 text-sm text-sand-500">{t('common.loadingDisks')}</span>
       </div>
     )
   }
@@ -34,7 +36,7 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
       {drives.length > 0 && (
         <>
           <h3 className="text-sm font-medium text-sand-500 uppercase tracking-wide">
-            Discos disponibles
+            {t('disk.available')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {drives.map((disk, i) => {
@@ -79,8 +81,8 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
                         />
                       </div>
                       <div className="flex justify-between text-xs text-sand-500">
-                        <span>{formatSize(disk.usedSpace)} usado</span>
-                        <span>{formatSize(disk.freeSpace)} libre de {formatSize(disk.totalSize)}</span>
+                        <span>{t('disk.used', { used: formatSize(disk.usedSpace) })}</span>
+                        <span>{t('disk.freeOfTotal', { free: formatSize(disk.freeSpace), total: formatSize(disk.totalSize) })}</span>
                       </div>
                     </>
                   )}
@@ -97,7 +99,7 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             </svg>
-            Seleccionar otra carpeta...
+            {t('disk.selectOther')}
           </span>
         </button>
       </div>

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import * as d3 from 'd3'
 import { FileNode } from '../types'
-import { getFileColor } from '../utils/colors'
+import { DIRECTORY_COLOR, getFileColor, getTextColor } from '../utils/colors'
 import { formatSize } from '../utils/format'
 
 interface TreemapProps {
@@ -13,6 +13,7 @@ interface TreemapProps {
 export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
   const hierarchy = useMemo(() => {
     return d3.hierarchy(data)
@@ -21,9 +22,9 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
   }, [data])
 
   useEffect(() => {
-    if (!containerRef.current || !svgRef.current) return
+    if (!svgRef.current) return
 
-    const { width, height } = containerRef.current.getBoundingClientRect()
+    const { width, height } = containerSize
     if (width === 0 || height === 0) return
 
     const svg = d3.select(svgRef.current)
@@ -58,9 +59,9 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       .attr('width', (d) => Math.max(0, d.x1 - d.x0))
       .attr('height', (d) => Math.max(0, d.y1 - d.y0))
       .attr('rx', 3)
-      .attr('fill', (d) => getFileColor(d.data.extension))
+      .attr('fill', (d) => d.data.isDirectory ? DIRECTORY_COLOR : getFileColor(d.data.extension))
       .attr('opacity', (d) => selectedFile?.path === d.data.path ? 1 : 0.85)
-      .attr('stroke', (d) => selectedFile?.path === d.data.path ? '#333' : 'transparent')
+      .attr('stroke', (d) => selectedFile?.path === d.data.path ? '#0F172A' : 'rgba(255,255,255,0.25)')
       .attr('stroke-width', 2)
       .on('mouseenter', function () {
         d3.select(this).attr('opacity', 1)
@@ -82,7 +83,7 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       })
       .attr('font-size', '11px')
       .attr('font-family', 'Inter, sans-serif')
-      .attr('fill', '#fff')
+      .attr('fill', (d) => getTextColor(d.data.isDirectory ? DIRECTORY_COLOR : getFileColor(d.data.extension)))
       .attr('font-weight', '500')
       .style('pointer-events', 'none')
       .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
@@ -96,21 +97,35 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       .text((d) => formatSize(d.data.size))
       .attr('font-size', '10px')
       .attr('font-family', 'Inter, sans-serif')
-      .attr('fill', 'rgba(255,255,255,0.8)')
+      .attr('fill', (d) => {
+        const textColor = getTextColor(d.data.isDirectory ? DIRECTORY_COLOR : getFileColor(d.data.extension))
+        return textColor === '#FFFFFF' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.85)'
+      })
       .style('pointer-events', 'none')
       .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
-  }, [hierarchy, data, onSelect, selectedFile])
+  }, [containerSize, hierarchy, onSelect, selectedFile])
 
-  // Resize observer
   useEffect(() => {
-    if (!containerRef.current) return
-    const observer = new ResizeObserver(() => {
-      // Trigger re-render by updating hierarchy
-      const event = new Event('resize')
-      window.dispatchEvent(event)
-    })
-    observer.observe(containerRef.current)
+    const container = containerRef.current
+    if (!container) return
+
+    const updateSize = () => {
+      const { width, height } = container.getBoundingClientRect()
+      setContainerSize((currentSize) => {
+        if (currentSize.width === width && currentSize.height === height) {
+          return currentSize
+        }
+
+        return { width, height }
+      })
+    }
+
+    updateSize()
+
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(container)
+
     return () => observer.disconnect()
   }, [])
 

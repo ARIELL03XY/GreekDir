@@ -1,9 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-
-export interface ScanProgress {
-  scanned: number
-  currentPath: string
-}
+import type { ScanProgress } from '../src/shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getDrives: () => ipcRenderer.invoke('get-drives'),
