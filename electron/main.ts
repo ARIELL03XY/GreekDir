@@ -1,16 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { execSync } from 'child_process'
-
-export interface DiskInfo {
-  name: string
-  path: string
-  totalSize: number
-  freeSpace: number
-  usedSpace: number
-  filesystem?: string
-}
+import { execFileSync, execSync } from 'child_process'
+import type { DiskInfo, FileNode, ScanProgress } from '../src/shared/types'
 
 function getDisks(): DiskInfo[] {
   const platform = process.platform
@@ -26,56 +18,128 @@ function getDisks(): DiskInfo[] {
 
 function getWindowsDisks(): DiskInfo[] {
   try {
-    const output = execSync(
-      'wmic logicaldisk get caption,freespace,size,volumename,filesystem /format:csv',
-      { encoding: 'utf8' }
-    )
-    const lines = output.trim().split('\n').filter((l) => l.trim().length > 0)
-    if (lines.length <= 1) return []
-
-    const disks: DiskInfo[] = []
-    for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].trim().split(',')
-      if (parts.length < 5) continue
-      const caption = parts[1] // e.g. "C:"
-      const filesystem = parts[2]
-      const freeSpace = parseInt(parts[3]) || 0
-      const totalSize = parseInt(parts[4]) || 0
-      const volumeName = parts[5] || ''
-
-      if (totalSize === 0) continue
-
-      disks.push({
-        name: volumeName ? `${volumeName} (${caption})` : caption,
-        path: caption + '\\',
-        totalSize,
-        freeSpace,
-        usedSpace: totalSize - freeSpace,
-        filesystem,
-      })
-    }
-    return disks
+    return getWindowsDisksFromPowerShell()
   } catch {
-    // Fallback: just list drive letters
-    const drives: DiskInfo[] = []
-    for (let i = 65; i <= 90; i++) {
-      const letter = String.fromCharCode(i)
-      const drivePath = `${letter}:\\`
-      try {
-        fs.accessSync(drivePath)
-        drives.push({
-          name: `${letter}:`,
-          path: drivePath,
-          totalSize: 0,
-          freeSpace: 0,
-          usedSpace: 0,
-        })
-      } catch {
-        // Drive doesn't exist
-      }
+    try {
+      return getWindowsDisksFromWmic()
+    } catch {
+      return getWindowsDriveLetterFallback()
     }
-    return drives
   }
+}
+
+function getWindowsDisksFromPowerShell(): DiskInfo[] {
+  const output = execFileSync(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-Command',
+      'Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -in 2,3,4 } | Select-Object DeviceID,FreeSpace,Size,VolumeName,FileSystem | ConvertTo-Json -Compress',
+    ],
+    { encoding: 'utf8' }
+  )
+
+  return parseWindowsDiskEntries(JSON.parse(output.trim() || '[]'))
+}
+
+function getWindowsDisksFromWmic(): DiskInfo[] {
+  const output = execSync(
+    'wmic logicaldisk get caption,freespace,size,volumename,filesystem /format:csv',
+    { encoding: 'utf8' }
+  )
+  const lines = output.trim().split('\n').filter((line) => line.trim().length > 0)
+  if (lines.length <= 1) return []
+
+  const entries = lines.slice(1).map((line) => {
+    const parts = line.trim().split(',')
+
+    return {
+      DeviceID: parts[1],
+      FileSystem: parts[2],
+      FreeSpace: parts[3],
+      Size: parts[4],
+      VolumeName: parts[5] || '',
+    }
+  })
+
+  return parseWindowsDiskEntries(entries)
+}
+
+function parseWindowsDiskEntries(rawEntries: unknown): DiskInfo[] {
+  const entries = Array.isArray(rawEntries) ? rawEntries : rawEntries ? [rawEntries] : []
+  const disks: DiskInfo[] = []
+
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') continue
+
+    const deviceId = getStringProperty(entry, 'DeviceID')
+    if (!deviceId) continue
+
+    const freeSpace = Number.parseInt(getStringProperty(entry, 'FreeSpace') ?? '0', 10) || 0
+    const totalSize = Number.parseInt(getStringProperty(entry, 'Size') ?? '0', 10) || 0
+    const volumeName = getStringProperty(entry, 'VolumeName') ?? ''
+    const filesystem = getStringProperty(entry, 'FileSystem') ?? undefined
+
+    if (totalSize === 0) continue
+
+    disks.push({
+      name: volumeName ? `${volumeName} (${deviceId})` : deviceId,
+      path: `${deviceId}\\`,
+      totalSize,
+      freeSpace,
+      usedSpace: totalSize - freeSpace,
+      filesystem,
+    })
+  }
+
+  return disks
+}
+
+function getStringProperty(
+  value: Record<string, unknown>,
+  key: string
+): string | undefined {
+  const property = value[key]
+  if (typeof property === 'string') return property
+  if (typeof property === 'number') return String(property)
+  return undefined
+}
+
+function getWindowsDriveLetterFallback(): DiskInfo[] {
+  const drives: DiskInfo[] = []
+  for (let i = 65; i <= 90; i++) {
+    const letter = String.fromCharCode(i)
+    const drivePath = `${letter}:\\`
+    try {
+      fs.accessSync(drivePath)
+      drives.push({
+        name: `${letter}:`,
+        path: drivePath,
+        totalSize: 0,
+        freeSpace: 0,
+        usedSpace: 0,
+      })
+    } catch {
+      // Drive does not exist
+    }
+  }
+  return drives
+}
+
+function getDisplayNameForPath(dirPath: string): string {
+  const parsedRoot = path.parse(dirPath).root
+  const normalizedPath = dirPath.replace(/[\\/]+$/, '')
+  const normalizedRoot = parsedRoot.replace(/[\\/]+$/, '')
+
+  if (
+    dirPath === parsedRoot ||
+    normalizedPath === normalizedRoot ||
+    normalizedPath.length === 0
+  ) {
+    return parsedRoot || dirPath
+  }
+
+  return path.basename(normalizedPath) || dirPath
 }
 
 function getMacDisks(): DiskInfo[] {
@@ -207,15 +271,6 @@ ipcMain.handle('select-directory', async () => {
   return result.filePaths[0]
 })
 
-export interface FileNode {
-  name: string
-  path: string
-  size: number
-  isDirectory: boolean
-  children?: FileNode[]
-  extension?: string
-}
-
 let scanAbortController: AbortController | null = null
 
 ipcMain.handle('scan-directory', async (event, dirPath: string) => {
@@ -223,7 +278,7 @@ ipcMain.handle('scan-directory', async (event, dirPath: string) => {
   const signal = scanAbortController.signal
 
   try {
-    const result = await scanDir(dirPath, signal, (progress) => {
+    const result = await scanDir(dirPath, signal, (progress: ScanProgress) => {
       mainWindow?.webContents.send('scan-progress', progress)
     })
     return result
@@ -241,12 +296,12 @@ ipcMain.handle('cancel-scan', () => {
 async function scanDir(
   dirPath: string,
   signal: AbortSignal,
-  onProgress: (info: { scanned: number; currentPath: string }) => void,
+  onProgress: (info: ScanProgress) => void,
   counter = { count: 0 }
 ): Promise<FileNode> {
   if (signal.aborted) throw new DOMException('Scan cancelled', 'AbortError')
 
-  const name = path.basename(dirPath)
+  const name = getDisplayNameForPath(dirPath)
   const node: FileNode = {
     name,
     path: dirPath,

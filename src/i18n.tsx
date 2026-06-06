@@ -1,0 +1,163 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+
+type Language = 'en' | 'es'
+
+type TranslationDictionary = Record<string, string>
+
+const translations: Record<Language, TranslationDictionary> = {
+  en: {
+    'app.backToHome': 'Back to home',
+    'app.selectFolder': 'Select folder',
+    'common.cancel': 'Cancel',
+    'common.loadingDisks': 'Detecting drives...',
+    'common.total': 'total',
+    'detail.extension': 'Extension',
+    'detail.fullPath': 'Full path',
+    'detail.items': 'Items',
+    'detail.percentage': 'Percentage',
+    'detail.proportion': 'Directory share',
+    'detail.size': 'Size',
+    'detail.title': 'Details',
+    'detail.type': 'Type',
+    'disk.available': 'Available drives',
+    'disk.freeOfTotal': '{{free}} free of {{total}}',
+    'disk.selectOther': 'Select another folder...',
+    'disk.used': '{{used}} used',
+    'file.directory': 'Folder',
+    'file.emptyFolder': 'This folder is empty',
+    'file.file': 'File',
+    'file.name': 'Name',
+    'file.size': 'Size',
+    'language.english': 'English',
+    'language.label': 'Language',
+    'language.spanish': 'Español',
+    'results.backToRoot': 'Back to root',
+    'results.list': 'List',
+    'results.legend': 'Color legend',
+    'results.treemap': 'Treemap',
+    'scan.filesScanned': '{{count}} files scanned',
+    'scan.title': 'Scanning...',
+    'welcome.description': 'Select a drive or folder to visualize how space is distributed. GreekDir shows an interactive map of your files.',
+    'welcome.featureBrowse': 'Navigation',
+    'welcome.featureBrowseDescription': 'Explore subfolders instantly',
+    'welcome.featureList': 'Detailed list',
+    'welcome.featureListDescription': 'Files sorted by size',
+    'welcome.featureTreemap': 'Visual treemap',
+    'welcome.featureTreemapDescription': 'Block map proportional to file size',
+    'welcome.title': 'Analyze your disk usage',
+    'category.archives': 'Archives',
+    'category.audio': 'Audio',
+    'category.code': 'Code',
+    'category.data': 'Data',
+    'category.directories': 'Directories',
+    'category.documents': 'Documents',
+    'category.executables': 'Executables',
+    'category.images': 'Images',
+    'category.other': 'Other',
+    'category.videos': 'Videos',
+  },
+  es: {
+    'app.backToHome': 'Volver al inicio',
+    'app.selectFolder': 'Seleccionar carpeta',
+    'common.cancel': 'Cancelar',
+    'common.loadingDisks': 'Detectando discos...',
+    'common.total': 'total',
+    'detail.extension': 'Extensión',
+    'detail.fullPath': 'Ruta completa',
+    'detail.items': 'Elementos',
+    'detail.percentage': 'Porcentaje',
+    'detail.proportion': 'Proporción del directorio',
+    'detail.size': 'Tamaño',
+    'detail.title': 'Detalles',
+    'detail.type': 'Tipo',
+    'disk.available': 'Discos disponibles',
+    'disk.freeOfTotal': '{{free}} libres de {{total}}',
+    'disk.selectOther': 'Seleccionar otra carpeta...',
+    'disk.used': '{{used}} usados',
+    'file.directory': 'Carpeta',
+    'file.emptyFolder': 'Esta carpeta está vacía',
+    'file.file': 'Archivo',
+    'file.name': 'Nombre',
+    'file.size': 'Tamaño',
+    'language.english': 'English',
+    'language.label': 'Idioma',
+    'language.spanish': 'Español',
+    'results.backToRoot': 'Volver a la raíz',
+    'results.list': 'Lista',
+    'results.legend': 'Leyenda de colores',
+    'results.treemap': 'Treemap',
+    'scan.filesScanned': '{{count}} archivos escaneados',
+    'scan.title': 'Analizando...',
+    'welcome.description': 'Selecciona un disco o carpeta para visualizar cómo se distribuye el espacio. GreekDir muestra un mapa interactivo de tus archivos.',
+    'welcome.featureBrowse': 'Navegación',
+    'welcome.featureBrowseDescription': 'Explora subcarpetas al instante',
+    'welcome.featureList': 'Lista detallada',
+    'welcome.featureListDescription': 'Archivos ordenados por tamaño',
+    'welcome.featureTreemap': 'Treemap visual',
+    'welcome.featureTreemapDescription': 'Mapa de bloques proporcional al tamaño',
+    'welcome.title': 'Analiza el uso de tus discos',
+    'category.archives': 'Archivos comprimidos',
+    'category.audio': 'Audio',
+    'category.code': 'Código',
+    'category.data': 'Datos',
+    'category.directories': 'Directorios',
+    'category.documents': 'Documentos',
+    'category.executables': 'Ejecutables',
+    'category.images': 'Imágenes',
+    'category.other': 'Otros',
+    'category.videos': 'Videos',
+  },
+}
+
+interface I18nContextValue {
+  language: Language
+  setLanguage: (language: Language) => void
+  t: (key: string, variables?: Record<string, string | number>) => string
+}
+
+const I18nContext = createContext<I18nContextValue | undefined>(undefined)
+
+function interpolate(
+  template: string,
+  variables: Record<string, string | number> = {}
+): string {
+  return Object.entries(variables).reduce((result, [key, value]) => {
+    return result.split(`{{${key}}}`).join(String(value))
+  }, template)
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguage] = useState<Language>('en')
+
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
+
+  const value = useMemo<I18nContextValue>(() => ({
+    language,
+    setLanguage,
+    t: (key, variables) => {
+      const template = translations[language][key] ?? translations.en[key] ?? key
+      return interpolate(template, variables)
+    },
+  }), [language])
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext)
+
+  if (!context) {
+    throw new Error('useI18n must be used within an I18nProvider')
+  }
+
+  return context
+}

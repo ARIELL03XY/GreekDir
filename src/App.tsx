@@ -73,7 +73,7 @@ export default function App() {
           <ScanningView progress={progress} onCancel={handleCancel} />
         )}
         {state === 'results' && scanData && (
-          <ResultsView data={scanData} />
+          <ResultsView data={scanData} onBackHome={handleReset} />
         )}
       </main>
     </div>

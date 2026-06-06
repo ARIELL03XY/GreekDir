@@ -1,5 +1,6 @@
 import { ScanProgress } from '../types'
 import { formatNumber } from '../utils/format'
+import { useI18n } from '../i18n'
 
 interface ScanningViewProps {
   progress: ScanProgress
@@ -7,6 +8,7 @@ interface ScanningViewProps {
 }
 
 export default function ScanningView({ progress, onCancel }: ScanningViewProps) {
+  const { t } = useI18n()
   const shortPath = progress.currentPath.length > 60
     ? '...' + progress.currentPath.slice(-57)
     : progress.currentPath
@@ -19,16 +21,16 @@ export default function ScanningView({ progress, onCancel }: ScanningViewProps) 
           <div className="absolute inset-0 rounded-full border-4 border-accent border-t-transparent animate-spin" />
         </div>
         <h2 className="text-xl font-semibold text-gray-800 mb-2">
-          Analizando...
+          {t('scan.title')}
         </h2>
         <p className="text-sand-500 mb-2">
-          {formatNumber(progress.scanned)} archivos escaneados
+          {t('scan.filesScanned', { count: formatNumber(progress.scanned) })}
         </p>
         <p className="text-xs text-sand-400 font-mono truncate mb-8 h-4">
           {shortPath}
         </p>
         <button onClick={onCancel} className="btn-secondary text-sm">
-          Cancelar
+          {t('common.cancel')}
         </button>
       </div>
     </div>

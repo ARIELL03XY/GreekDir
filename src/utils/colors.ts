@@ -1,118 +1,114 @@
-const FILE_COLORS: Record<string, string> = {
-  // Images
-  '.jpg': '#E8A87C',
-  '.jpeg': '#E8A87C',
-  '.png': '#E8A87C',
-  '.gif': '#E8A87C',
-  '.svg': '#E8A87C',
-  '.webp': '#E8A87C',
-  '.bmp': '#E8A87C',
-  '.ico': '#E8A87C',
-  
-  // Videos
-  '.mp4': '#C97B4A',
-  '.avi': '#C97B4A',
-  '.mkv': '#C97B4A',
-  '.mov': '#C97B4A',
-  '.wmv': '#C97B4A',
-  '.flv': '#C97B4A',
-  '.webm': '#C97B4A',
-  
-  // Audio
-  '.mp3': '#85B8CB',
-  '.wav': '#85B8CB',
-  '.flac': '#85B8CB',
-  '.ogg': '#85B8CB',
-  '.aac': '#85B8CB',
-  '.wma': '#85B8CB',
-  
-  // Documents
-  '.pdf': '#D4837C',
-  '.doc': '#7B9EC9',
-  '.docx': '#7B9EC9',
-  '.xls': '#7BAF7B',
-  '.xlsx': '#7BAF7B',
-  '.ppt': '#C9977B',
-  '.pptx': '#C9977B',
-  '.txt': '#B8B8B8',
-  '.md': '#B8B8B8',
-  
-  // Code
-  '.js': '#F0DB4F',
-  '.ts': '#3178C6',
-  '.tsx': '#3178C6',
-  '.jsx': '#F0DB4F',
-  '.py': '#4B8BBE',
-  '.java': '#B07219',
-  '.cpp': '#6295CB',
-  '.c': '#555555',
-  '.rs': '#DEA584',
-  '.go': '#00ADD8',
-  '.html': '#E34C26',
-  '.css': '#563D7C',
-  '.scss': '#CF649A',
-  
-  // Archives
-  '.zip': '#8B5E3C',
-  '.rar': '#8B5E3C',
-  '.7z': '#8B5E3C',
-  '.tar': '#8B5E3C',
-  '.gz': '#8B5E3C',
-  
-  // Executables
-  '.exe': '#9C5C5C',
-  '.dll': '#9C7B5C',
-  '.msi': '#9C5C5C',
-  '.app': '#9C5C5C',
-  
-  // Data
-  '.json': '#A6A6A6',
-  '.xml': '#A6A6A6',
-  '.csv': '#7BAF7B',
-  '.sql': '#E38C00',
-  '.db': '#E38C00',
+const CATEGORY_BY_EXTENSION: Record<string, string> = {
+  '.jpg': 'images',
+  '.jpeg': 'images',
+  '.png': 'images',
+  '.gif': 'images',
+  '.svg': 'images',
+  '.webp': 'images',
+  '.bmp': 'images',
+  '.ico': 'images',
+  '.mp4': 'videos',
+  '.avi': 'videos',
+  '.mkv': 'videos',
+  '.mov': 'videos',
+  '.wmv': 'videos',
+  '.flv': 'videos',
+  '.webm': 'videos',
+  '.mp3': 'audio',
+  '.wav': 'audio',
+  '.flac': 'audio',
+  '.ogg': 'audio',
+  '.aac': 'audio',
+  '.wma': 'audio',
+  '.pdf': 'documents',
+  '.doc': 'documents',
+  '.docx': 'documents',
+  '.xls': 'documents',
+  '.xlsx': 'documents',
+  '.ppt': 'documents',
+  '.pptx': 'documents',
+  '.txt': 'documents',
+  '.md': 'documents',
+  '.js': 'code',
+  '.ts': 'code',
+  '.tsx': 'code',
+  '.jsx': 'code',
+  '.py': 'code',
+  '.java': 'code',
+  '.cpp': 'code',
+  '.c': 'code',
+  '.rs': 'code',
+  '.go': 'code',
+  '.html': 'code',
+  '.css': 'code',
+  '.scss': 'code',
+  '.zip': 'archives',
+  '.rar': 'archives',
+  '.7z': 'archives',
+  '.tar': 'archives',
+  '.gz': 'archives',
+  '.exe': 'executables',
+  '.dll': 'executables',
+  '.msi': 'executables',
+  '.app': 'executables',
+  '.json': 'data',
+  '.xml': 'data',
+  '.csv': 'data',
+  '.sql': 'data',
+  '.db': 'data',
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  images: '#E8A87C',
-  videos: '#C97B4A',
-  audio: '#85B8CB',
-  documents: '#7B9EC9',
-  code: '#3178C6',
-  archives: '#8B5E3C',
-  executables: '#9C5C5C',
-  data: '#A6A6A6',
-  other: '#D4CEC5',
+  directories: '#334155',
+  images: '#E11D48',
+  videos: '#7C3AED',
+  audio: '#0891B2',
+  documents: '#2563EB',
+  code: '#F59E0B',
+  archives: '#A16207',
+  executables: '#DC2626',
+  data: '#059669',
+  other: '#64748B',
 }
 
-export function getFileColor(extension?: string): string {
-  if (!extension) return CATEGORY_COLORS.other
-  return FILE_COLORS[extension] || CATEGORY_COLORS.other
-}
+export const TREEMAP_LEGEND_CATEGORIES = [
+  'directories',
+  'images',
+  'videos',
+  'audio',
+  'documents',
+  'code',
+  'archives',
+  'executables',
+  'data',
+  'other',
+] as const
+
+export const DIRECTORY_COLOR = CATEGORY_COLORS.directories
 
 export function getFileCategory(extension?: string): string {
   if (!extension) return 'other'
-  
-  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.ico']
-  const videoExts = ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm']
-  const audioExts = ['.mp3', '.wav', '.flac', '.ogg', '.aac', '.wma']
-  const docExts = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.md']
-  const codeExts = ['.js', '.ts', '.tsx', '.jsx', '.py', '.java', '.cpp', '.c', '.rs', '.go', '.html', '.css', '.scss']
-  const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz']
-  const execExts = ['.exe', '.dll', '.msi', '.app']
-  
-  if (imageExts.includes(extension)) return 'images'
-  if (videoExts.includes(extension)) return 'videos'
-  if (audioExts.includes(extension)) return 'audio'
-  if (docExts.includes(extension)) return 'documents'
-  if (codeExts.includes(extension)) return 'code'
-  if (archiveExts.includes(extension)) return 'archives'
-  if (execExts.includes(extension)) return 'executables'
-  return 'other'
+  return CATEGORY_BY_EXTENSION[extension] || 'other'
 }
 
 export function getCategoryColor(category: string): string {
   return CATEGORY_COLORS[category] || CATEGORY_COLORS.other
 }
 
-export { CATEGORY_COLORS }
+export function getFileColor(extension?: string): string {
+  return getCategoryColor(getFileCategory(extension))
+}
+
+export function getTextColor(backgroundColor: string): string {
+  const hex = backgroundColor.replace('#', '')
+  const normalized = hex.length === 3
+    ? hex.split('').map((value) => value + value).join('')
+    : hex
+
+  const red = Number.parseInt(normalized.slice(0, 2), 16)
+  const green = Number.parseInt(normalized.slice(2, 4), 16)
+  const blue = Number.parseInt(normalized.slice(4, 6), 16)
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+
+  return luminance > 0.62 ? '#0F172A' : '#FFFFFF'
+}

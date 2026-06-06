@@ -1,25 +1,6 @@
-export interface FileNode {
-  name: string
-  path: string
-  size: number
-  isDirectory: boolean
-  children?: FileNode[]
-  extension?: string
-}
+export type { DiskInfo, FileNode, ScanProgress } from './shared/types'
 
-export interface DiskInfo {
-  name: string
-  path: string
-  totalSize: number
-  freeSpace: number
-  usedSpace: number
-  filesystem?: string
-}
-
-export interface ScanProgress {
-  scanned: number
-  currentPath: string
-}
+import type { FileNode, DiskInfo, ScanProgress } from './shared/types'
 
 export interface ElectronAPI {
   getDrives: () => Promise<DiskInfo[]>
