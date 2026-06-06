@@ -6,6 +6,7 @@ export interface ScanProgress {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  getDrives: () => ipcRenderer.invoke('get-drives'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   scanDirectory: (path: string) => ipcRenderer.invoke('scan-directory', path),
   cancelScan: () => ipcRenderer.invoke('cancel-scan'),

@@ -13,10 +13,7 @@ export default function App() {
   const [progress, setProgress] = useState<ScanProgress>({ scanned: 0, currentPath: '' })
   const [selectedPath, setSelectedPath] = useState<string>('')
 
-  const handleSelectDirectory = useCallback(async () => {
-    const dirPath = await window.electronAPI.selectDirectory()
-    if (!dirPath) return
-
+  const startScan = useCallback(async (dirPath: string) => {
     setSelectedPath(dirPath)
     setState('scanning')
     setProgress({ scanned: 0, currentPath: '' })
@@ -35,6 +32,16 @@ export default function App() {
       setState('idle')
     }
   }, [])
+
+  const handleSelectDirectory = useCallback(async () => {
+    const dirPath = await window.electronAPI.selectDirectory()
+    if (!dirPath) return
+    startScan(dirPath)
+  }, [startScan])
+
+  const handleScanPath = useCallback((path: string) => {
+    startScan(path)
+  }, [startScan])
 
   const handleCancel = useCallback(async () => {
     await window.electronAPI.cancelScan()
@@ -57,7 +64,10 @@ export default function App() {
       />
       <main className="flex-1 overflow-hidden">
         {state === 'idle' && (
-          <WelcomeScreen onSelectDirectory={handleSelectDirectory} />
+          <WelcomeScreen
+            onSelectDirectory={handleSelectDirectory}
+            onScanPath={handleScanPath}
+          />
         )}
         {state === 'scanning' && (
           <ScanningView progress={progress} onCancel={handleCancel} />

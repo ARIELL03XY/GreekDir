@@ -7,12 +7,22 @@ export interface FileNode {
   extension?: string
 }
 
+export interface DiskInfo {
+  name: string
+  path: string
+  totalSize: number
+  freeSpace: number
+  usedSpace: number
+  filesystem?: string
+}
+
 export interface ScanProgress {
   scanned: number
   currentPath: string
 }
 
 export interface ElectronAPI {
+  getDrives: () => Promise<DiskInfo[]>
   selectDirectory: () => Promise<string | null>
   scanDirectory: (path: string) => Promise<FileNode | null>
   cancelScan: () => Promise<void>
