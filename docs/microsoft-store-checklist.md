@@ -2,7 +2,7 @@
 
 ## 1) Preparación del producto
 
-- [ ] Confirmar alcance de v1.0 en `/docs/windows-v1-scope.md`.
+- [ ] Confirmar alcance de v1.0 en `docs/windows-v1-scope.md`.
 - [ ] Ejecutar pruebas manuales en discos pequeños/medianos/grandes.
 - [ ] Validar manejo de errores y estados de carga.
 
@@ -11,7 +11,7 @@
 - [ ] Ejecutar `npm run build:win`.
 - [ ] Verificar instalador en `release/`.
 - [ ] Probar instalación limpia en otra máquina Windows.
-- [ ] Registrar resultado en `/docs/windows-validation.md`.
+- [ ] Registrar resultado en `docs/windows-validation.md`.
 
 ## 3) Build para Microsoft Store (APPX)
 
@@ -39,12 +39,12 @@ npm run build:store
 - [ ] Completar metadata: descripción, capturas, categoría y keywords.
 - [ ] Definir precio y regiones.
 - [ ] Configurar clasificación por edad.
-- [ ] Seguir `/docs/partner-center-step-by-step.md`.
+- [ ] Seguir `docs/partner-center-step-by-step.md`.
 
 ## 5) Cumplimiento
 
-- [ ] Publicar política de privacidad (`/docs/privacy-policy.md`).
-- [ ] Definir soporte de usuario (`/docs/support.md`).
+- [ ] Publicar política de privacidad (`docs/privacy-policy.md`).
+- [ ] Definir soporte de usuario (`docs/support.md`).
 - [ ] Revisar cumplimiento de políticas de Microsoft Store.
 
 ## 6) Envío y revisión

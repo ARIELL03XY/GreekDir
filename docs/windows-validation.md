@@ -52,3 +52,9 @@ Resultado:
 
 - Estado: `PENDIENTE`
 - Notas: `<completar>`
+
+## Limitaciones del entorno de desarrollo actual
+
+- En Linux, `npm run build:win` puede fallar por dependencia de `wine` para firmado/empaquetado.
+- En Linux, `npm run build:store` (APPX) falla porque AppX requiere Windows 10+ para build.
+- Por lo anterior, la validación final de NSIS/APPX debe ejecutarse en una máquina Windows real.

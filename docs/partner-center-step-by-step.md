@@ -19,8 +19,8 @@ Guía operativa para publicar GreekDir en Microsoft Store.
 1. Descripción corta y larga.
 2. Capturas de pantalla.
 3. Categoría y palabras clave.
-4. Datos de soporte usando `/docs/support.md`.
-5. Política de privacidad basada en `/docs/privacy-policy.md`.
+4. Datos de soporte usando `docs/support.md`.
+5. Política de privacidad basada en `docs/privacy-policy.md`.
 
 ## 4) Pricing y distribución
 

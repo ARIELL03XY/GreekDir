@@ -25,4 +25,4 @@ GreekDir analiza archivos y carpetas en el equipo local del usuario para mostrar
 
 ## Contacto
 
-Para solicitudes de privacidad y soporte, usar el canal definido en `/docs/support.md`.
+Para solicitudes de privacidad y soporte, usar el canal definido en `docs/support.md`.
