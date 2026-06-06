@@ -20,6 +20,12 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
   const [currentNode, setCurrentNode] = useState<FileNode>(data)
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null)
   const [breadcrumbs, setBreadcrumbs] = useState<FileNode[]>([data])
+  /**
+   * Stores lazily-loaded children keyed by directory path.
+   * When a node arrives from the initial shallow scan without its children
+   * (childCount is set), we fetch them via expand-directory and cache here.
+   */
+  const [expandedNodes, setExpandedNodes] = useState<Map<string, FileNode[]>>(new Map())
 
   const getBreadcrumbLabel = useCallback((node: FileNode) => {
     if (node.name) return node.name
@@ -27,15 +33,51 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
     return `…${node.path.slice(-35)}`
   }, [])
 
-  const handleDrillDown = useCallback((node: FileNode) => {
-    if (node.isDirectory && node.children && node.children.length > 0) {
-      setCurrentNode(node)
-      setBreadcrumbs((prev) => [...prev, node])
-      setSelectedFile(null)
+  /**
+   * Returns the effective children for a node, preferring lazily-loaded data.
+   */
+  const getEffectiveChildren = useCallback(
+    (node: FileNode): FileNode[] | undefined => {
+      if (expandedNodes.has(node.path)) return expandedNodes.get(node.path)
+      return node.children
+    },
+    [expandedNodes]
+  )
+
+  /**
+   * Returns a display-ready copy of `node` with lazily-loaded children merged
+   * in (if available). This keeps the original node object immutable.
+   */
+  const withExpandedChildren = useCallback(
+    (node: FileNode): FileNode => {
+      const effective = getEffectiveChildren(node)
+      if (effective === node.children) return node
+      return { ...node, children: effective }
+    },
+    [getEffectiveChildren]
+  )
+
+  const handleDrillDown = useCallback(async (node: FileNode) => {
+    if (node.isDirectory) {
+      const children = getEffectiveChildren(node)
+      if (children && children.length > 0) {
+        setCurrentNode(node)
+        setBreadcrumbs((prev) => [...prev, node])
+        setSelectedFile(null)
+      } else if (node.childCount && node.childCount > 0) {
+        // Children were omitted from the initial shallow IPC payload — fetch them now.
+        const fetched = await window.electronAPI.expandDirectory(node.path)
+        if (fetched) {
+          setExpandedNodes((prev) => new Map(prev).set(node.path, fetched))
+          setCurrentNode(node)
+          setBreadcrumbs((prev) => [...prev, node])
+          setSelectedFile(null)
+        }
+      }
     } else {
       setSelectedFile(node)
     }
-  }, [])
+  }, [getEffectiveChildren])
 
   const handleBreadcrumb = useCallback((index: number) => {
     const node = breadcrumbs[index]
@@ -48,6 +90,9 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
     category,
     color: getCategoryColor(category),
   })), [])
+
+  // The node passed to child components always carries its effective children.
+  const currentNodeForDisplay = withExpandedChildren(currentNode)
 
   return (
     <div className="h-full flex">
@@ -127,7 +172,7 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
               </div>
               <div className="min-h-0 flex-1">
                 <Treemap
-                  data={currentNode}
+                  data={currentNodeForDisplay}
                   onSelect={handleDrillDown}
                   selectedFile={selectedFile}
                 />
@@ -135,7 +180,7 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
             </div>
           ) : (
             <FileList
-              data={currentNode}
+              data={currentNodeForDisplay}
               onSelect={handleDrillDown}
             />
           )}

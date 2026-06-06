@@ -259,6 +259,49 @@ app.on('activate', () => {
 
 // IPC Handlers
 
+/** Maximum depth of the tree included in the initial scan-directory IPC response. */
+const MAX_IPC_DEPTH = 3
+
+/** In-memory cache of the last full scan result used for lazy expand-directory requests. */
+let fullScanCache: FileNode | null = null
+
+/**
+ * Returns a copy of `node` that only includes children up to `maxDepth` levels
+ * below the current depth. Directories that are cut off keep their `size` and
+ * receive a `childCount` field so the renderer knows they can be expanded.
+ */
+function buildShallowTree(node: FileNode, currentDepth: number, maxDepth: number): FileNode {
+  if (!node.isDirectory || !node.children) {
+    return node
+  }
+
+  if (currentDepth >= maxDepth) {
+    // Omit children but record how many there are so the renderer can lazy-load.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { children, ...rest } = node
+    return { ...rest, childCount: node.children.length }
+  }
+
+  return {
+    ...node,
+    children: node.children.map((child) => buildShallowTree(child, currentDepth + 1, maxDepth)),
+  }
+}
+
+/**
+ * Finds the node in `root` whose `path` matches `targetPath`.
+ * Returns `null` if not found.
+ */
+function findNodeByPath(root: FileNode, targetPath: string): FileNode | null {
+  if (root.path === targetPath) return root
+  if (!root.children) return null
+  for (const child of root.children) {
+    const found = findNodeByPath(child, targetPath)
+    if (found) return found
+  }
+  return null
+}
+
 ipcMain.handle('get-drives', async () => {
   return getDisks()
 })
@@ -281,7 +324,11 @@ ipcMain.handle('scan-directory', async (event, dirPath: string) => {
     const result = await scanDir(dirPath, signal, (progress: ScanProgress) => {
       mainWindow?.webContents.send('scan-progress', progress)
     })
-    return result
+    // Cache the full tree so expand-directory can serve subtrees on demand.
+    fullScanCache = result
+    // Only send the first MAX_IPC_DEPTH levels to the renderer to keep the
+    // initial IPC payload small and avoid freezing the renderer.
+    return result ? buildShallowTree(result, 0, MAX_IPC_DEPTH) : null
   } catch (err: any) {
     if (err.name === 'AbortError') return null
     throw err
@@ -291,6 +338,19 @@ ipcMain.handle('scan-directory', async (event, dirPath: string) => {
 ipcMain.handle('cancel-scan', () => {
   scanAbortController?.abort()
   scanAbortController = null
+})
+
+/**
+ * Returns the direct children of the directory at `dirPath` from the cached
+ * scan result (one additional level of depth), so the renderer can populate
+ * nodes it did not receive in the initial shallow payload.
+ */
+ipcMain.handle('expand-directory', (_event, dirPath: string) => {
+  if (!fullScanCache) return null
+  const node = findNodeByPath(fullScanCache, dirPath)
+  if (!node || !node.isDirectory || !node.children) return null
+  // Return shallow children (one more level so the user sees sub-items too).
+  return node.children.map((child) => buildShallowTree(child, 0, 1))
 })
 
 async function scanDir(
@@ -312,7 +372,7 @@ async function scanDir(
 
   let entries: fs.Dirent[]
   try {
-    entries = fs.readdirSync(dirPath, { withFileTypes: true })
+    entries = await fs.promises.readdir(dirPath, { withFileTypes: true })
   } catch {
     return node
   }
@@ -332,7 +392,7 @@ async function scanDir(
       node.size += childNode.size
     } else if (entry.isFile()) {
       try {
-        const stats = fs.statSync(fullPath)
+        const stats = await fs.promises.stat(fullPath)
         const ext = path.extname(entry.name).toLowerCase()
         node.children!.push({
           name: entry.name,
@@ -350,8 +410,8 @@ async function scanDir(
     counter.count++
     if (counter.count % 100 === 0) {
       onProgress({ scanned: counter.count, currentPath: fullPath })
-      // Yield to event loop
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      // Yield to the event loop between batches so IPC/UI messages are processed.
+      await new Promise<void>((resolve) => setImmediate(resolve))
     }
   }
 

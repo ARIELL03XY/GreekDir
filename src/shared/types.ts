@@ -5,6 +5,8 @@ export interface FileNode {
   isDirectory: boolean
   children?: FileNode[]
   extension?: string
+  /** Present when children were omitted from the IPC payload; indicates the real child count. */
+  childCount?: number
 }
 
 export interface DiskInfo {
