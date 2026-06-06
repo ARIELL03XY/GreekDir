@@ -7,6 +7,7 @@ export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   scanDirectory: (path: string) => Promise<FileNode | null>
   cancelScan: () => Promise<void>
+  expandDirectory: (path: string) => Promise<FileNode[] | null>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
 }
 

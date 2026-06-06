@@ -10,14 +10,63 @@ interface TreemapProps {
   selectedFile: FileNode | null
 }
 
+/** Maximum number of tiles rendered at once to keep the DOM manageable. */
+const MAX_VISIBLE_NODES = 500
+
 export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
+  /**
+   * Build a flat D3 hierarchy from the *direct children* of the current node.
+   * Using leaves of the full subtree would create thousands of SVG elements for
+   * large directories; showing direct children limits DOM nodes to at most
+   * MAX_VISIBLE_NODES + 1 ("others") tiles while still conveying relative sizes.
+   */
   const hierarchy = useMemo(() => {
-    return d3.hierarchy(data)
-      .sum((d) => (d.isDirectory ? 0 : d.size))
+    // Sort by size descending so the slice always keeps the largest items.
+    const children = (data.children || []).slice().sort((a, b) => b.size - a.size)
+
+    // Show the top MAX_VISIBLE_NODES children by size; group the rest into an
+    // "others" aggregate tile so the treemap always sums to 100 %.
+    const visible = children.slice(0, MAX_VISIBLE_NODES)
+    const hidden = children.slice(MAX_VISIBLE_NODES)
+    const othersSize = hidden.reduce((acc, c) => acc + c.size, 0)
+
+    const shallowChildren: FileNode[] = visible.map((child) => ({
+      name: child.name,
+      path: child.path,
+      size: child.size,
+      isDirectory: child.isDirectory,
+      extension: child.extension,
+      childCount: child.childCount,
+      // Strip nested children — we only render one level deep.
+    }))
+
+    if (othersSize > 0) {
+      shallowChildren.push({
+        name: `+${hidden.length} more`,
+        path: '__others__',
+        size: othersSize,
+        isDirectory: false,
+      })
+    }
+
+    const shallowRoot: FileNode = {
+      name: data.name,
+      path: data.path,
+      // Set size to 0 so D3's .sum() aggregates only from the leaf children,
+      // avoiding double-counting the root's pre-computed total size.
+      size: 0,
+      isDirectory: true,
+      children: shallowChildren,
+    }
+
+    return d3
+      .hierarchy(shallowRoot)
+      // All depth-1 nodes are leaves (children stripped), so use d.size directly.
+      .sum((d) => d.size)
       .sort((a, b) => (b.value || 0) - (a.value || 0))
   }, [data])
 
@@ -51,7 +100,7 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       .attr('transform', (d) => `translate(${d.x0},${d.y0})`)
       .style('cursor', 'pointer')
       .on('click', (_, d) => {
-        onSelect(d.data)
+        if (d.data.path !== '__others__') onSelect(d.data)
       })
 
     // Rectangles
