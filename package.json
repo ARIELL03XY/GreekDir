@@ -8,7 +8,7 @@
     "build": "tsc && vite build && electron-builder --publish never",
     "build:win": "tsc && vite build && electron-builder --win nsis --x64 --publish never",
     "build:store": "tsc && vite build && electron-builder --win appx --x64 --config electron-builder.store.json --publish never",
-    "release:checklist": "node -e \"console.log('See /docs/microsoft-store-checklist.md')\"",
+    "release:checklist": "echo \"See /docs/microsoft-store-checklist.md\"",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "lint": "eslint src --ext .ts,.tsx"

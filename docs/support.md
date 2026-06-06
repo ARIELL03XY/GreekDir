@@ -1,8 +1,10 @@
 # Support
 
+> ⚠️ TODO antes de publicar: reemplazar valores de ejemplo por contacto real de soporte.
+
 ## Soporte de GreekDir
 
-Antes de publicar, completar este documento con los datos reales de soporte:
+Completar este documento con los datos reales de soporte:
 
 - Correo de soporte: `support@example.com`
 - Sitio web: `https://example.com`

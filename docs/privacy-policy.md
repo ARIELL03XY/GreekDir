@@ -1,5 +1,7 @@
 # Privacy Policy (Draft)
 
+> ⚠️ Borrador: reemplazar este documento por la versión legal final antes de publicar en Microsoft Store.
+
 GreekDir analiza archivos y carpetas en el equipo local del usuario para mostrar su uso de espacio.
 
 ## Datos que procesa la app
@@ -16,5 +18,3 @@ GreekDir analiza archivos y carpetas en el equipo local del usuario para mostrar
 ## Contacto
 
 Para solicitudes de privacidad, usar el canal definido en `/docs/support.md`.
-
-> Reemplazar este borrador por la versión legal final antes de publicar en Microsoft Store.
