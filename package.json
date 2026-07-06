@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build && electron-builder --publish never",
     "build:win": "tsc && vite build && electron-builder --win nsis --x64 --publish never",
+    "build:mac": "tsc && vite build && electron-builder --mac --publish never",
     "build:store": "tsc && vite build && electron-builder --win appx --x64 --config electron-builder.store.json --publish never",
     "release:checklist": "echo \"See /docs/microsoft-store-checklist.md\"",
     "preview": "vite preview",
@@ -31,11 +32,24 @@
       "target": [
         "nsis"
       ],
+      "icon": "build/icon.png",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": "universal"
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "artifactName": "${productName}-${version}-universal.${ext}",
+      "identity": null
     }
   },
   "dependencies": {
