@@ -7,6 +7,8 @@ export interface FileNode {
   extension?: string
   /** Present when children were omitted from the IPC payload; indicates the real child count. */
   childCount?: number
+  /** True when the directory could not be read (usually a permissions error). */
+  inaccessible?: boolean
 }
 
 export interface DiskInfo {

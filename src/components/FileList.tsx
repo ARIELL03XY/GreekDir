@@ -39,6 +39,11 @@ export default function FileList({ data, onSelect }: FileListProps) {
                   <span className="truncate group-hover:text-accent transition-colors">
                     {item.isDirectory ? '📁 ' : ''}{item.name}
                   </span>
+                  {item.inaccessible && (
+                    <span className="text-xs text-amber-600 shrink-0" title={t('file.noAccess')}>
+                      🔒 {t('file.noAccess')}
+                    </span>
+                  )}
                 </div>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs text-gray-600">

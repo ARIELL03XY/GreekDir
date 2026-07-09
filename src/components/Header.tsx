@@ -9,9 +9,12 @@ interface HeaderProps {
 
 export default function Header({ state, selectedPath, onSelectDirectory, onReset }: HeaderProps) {
   const { language, setLanguage, t } = useI18n()
+  // With the hiddenInset title bar on macOS the traffic lights overlay the
+  // top-left corner, so shift the header content right to clear them.
+  const isMac = window.electronAPI?.platform === 'darwin'
 
   return (
-    <header className="bg-white/80 backdrop-blur-sm border-b border-cream-300 px-6 py-4 flex items-center justify-between drag-region">
+    <header className={`bg-white/80 backdrop-blur-sm border-b border-cream-300 py-4 pr-6 flex items-center justify-between drag-region ${isMac ? 'pl-20' : 'pl-6'}`}>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center">

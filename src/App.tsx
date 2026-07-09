@@ -22,14 +22,20 @@ export default function App() {
       setProgress(p)
     })
 
-    const result = await window.electronAPI.scanDirectory(dirPath)
-    unsubscribe()
-
-    if (result) {
-      setScanData(result)
-      setState('results')
-    } else {
+    try {
+      const result = await window.electronAPI.scanDirectory(dirPath)
+      if (result) {
+        setScanData(result)
+        setState('results')
+      } else {
+        setState('idle')
+      }
+    } catch (err) {
+      // A failed scan (e.g. permission errors) should not leave the UI stuck.
+      console.error('Scan failed:', err)
       setState('idle')
+    } finally {
+      unsubscribe()
     }
   }, [])
 
@@ -73,7 +79,11 @@ export default function App() {
           <ScanningView progress={progress} onCancel={handleCancel} />
         )}
         {state === 'results' && scanData && (
-          <ResultsView data={scanData} onBackHome={handleReset} />
+          <ResultsView
+            data={scanData}
+            onBackHome={handleReset}
+            onRescan={() => startScan(selectedPath)}
+          />
         )}
       </main>
     </div>

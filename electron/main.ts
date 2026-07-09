@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell, type MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execFileSync, execSync } from 'child_process'
@@ -154,17 +154,22 @@ function getMacDisks(): DiskInfo[] {
 
       const mountPoint = parts.slice(8).join(' ') || parts[parts.length - 1]
       const totalBlocks = parseInt(parts[1]) || 0
-      const usedBlocks = parseInt(parts[2]) || 0
       const freeBlocks = parseInt(parts[3]) || 0
 
       // Only show physical volumes (skip devfs, map, etc)
       if (!parts[0].startsWith('/dev/')) continue
       // Skip small system volumes
       if (totalBlocks < 1024 * 1024) continue
+      // Skip APFS helper volumes (Preboot, Update, Data, VM…) — the Data
+      // volume is reachable from '/' via firmlinks, so listing it separately
+      // would duplicate "Macintosh HD".
+      if (mountPoint.startsWith('/System/Volumes/') || mountPoint.startsWith('/private/')) continue
 
       const totalSize = totalBlocks * 1024
-      const usedSpace = usedBlocks * 1024
       const freeSpace = freeBlocks * 1024
+      // On APFS the boot volume's own "used" blocks exclude the shared
+      // container (the Data volume), so derive usage from free space instead.
+      const usedSpace = totalSize - freeSpace
 
       disks.push({
         name: mountPoint === '/' ? 'Macintosh HD' : path.basename(mountPoint),
@@ -224,13 +229,60 @@ function getLinuxDisks(): DiskInfo[] {
 
 let mainWindow: BrowserWindow | null = null
 
+/** Persisted window bounds so the app reopens where the user left it. */
+const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.json')
+
+function loadWindowState(): Partial<Electron.Rectangle> {
+  try {
+    const state = JSON.parse(fs.readFileSync(windowStateFile(), 'utf8'))
+    if (typeof state.width === 'number' && typeof state.height === 'number') return state
+  } catch {
+    // First run or corrupt file — use defaults.
+  }
+  return {}
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  try {
+    fs.writeFileSync(windowStateFile(), JSON.stringify(mainWindow.getNormalBounds()))
+  } catch {
+    // Non-fatal: window just won't be restored next launch.
+  }
+}
+
+/**
+ * Replaces Electron's default menu. In production the View menu (with its
+ * Reload accelerator) is omitted — reloading the renderer would orphan the
+ * in-memory scan and drop the results view.
+ */
+function setupMenu() {
+  const isDev = !!process.env.VITE_DEV_SERVER_URL
+  if (process.platform === 'darwin') {
+    const template: MenuItemConstructorOptions[] = [
+      { role: 'appMenu' },
+      { role: 'editMenu' },
+      ...(isDev ? [{ role: 'viewMenu' } as MenuItemConstructorOptions] : []),
+      { role: 'windowMenu' },
+    ]
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  } else {
+    // Windows/Linux: no menu bar in production (View/reload only in dev).
+    Menu.setApplicationMenu(isDev ? Menu.buildFromTemplate([{ role: 'viewMenu' }]) : null)
+  }
+}
+
 function createWindow() {
+  const savedState = loadWindowState()
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    ...savedState,
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
+    // 'hiddenInset' is macOS-only; keep the native frame elsewhere so Windows
+    // retains its standard window controls.
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
     backgroundColor: '#FAF9F7',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -238,6 +290,8 @@ function createWindow() {
       nodeIntegration: false,
     },
   })
+
+  mainWindow.on('close', saveWindowState)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -247,7 +301,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  setupMenu()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
@@ -290,13 +347,32 @@ function buildShallowTree(node: FileNode, currentDepth: number, maxDepth: number
 
 /**
  * Finds the node in `root` whose `path` matches `targetPath`.
- * Returns `null` if not found.
+ * Child paths are built with path.join(parent, name), so we can descend the
+ * tree following path prefixes instead of walking every node — O(depth ×
+ * siblings) rather than O(total nodes), which matters on multi-million-file
+ * scans. Falls back to a full search if the prefix descent dead-ends.
  */
 function findNodeByPath(root: FileNode, targetPath: string): FileNode | null {
+  let node: FileNode | null = root
+  while (node) {
+    if (node.path === targetPath) return node
+    const parent: FileNode = node
+    node =
+      parent.children?.find(
+        (c) =>
+          c.path === targetPath ||
+          (targetPath.startsWith(c.path) &&
+            (c.path.endsWith(path.sep) || targetPath[c.path.length] === path.sep))
+      ) ?? null
+  }
+  return findNodeByPathSlow(root, targetPath)
+}
+
+function findNodeByPathSlow(root: FileNode, targetPath: string): FileNode | null {
   if (root.path === targetPath) return root
   if (!root.children) return null
   for (const child of root.children) {
-    const found = findNodeByPath(child, targetPath)
+    const found = findNodeByPathSlow(child, targetPath)
     if (found) return found
   }
   return null
@@ -335,6 +411,19 @@ ipcMain.handle('scan-directory', async (event, dirPath: string) => {
   }
 })
 
+ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {
+  shell.showItemInFolder(targetPath)
+})
+
+ipcMain.handle('move-to-trash', async (_event, targetPath: string) => {
+  try {
+    await shell.trashItem(targetPath)
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('cancel-scan', () => {
   scanAbortController?.abort()
   scanAbortController = null
@@ -352,6 +441,16 @@ ipcMain.handle('expand-directory', (_event, dirPath: string) => {
   // Return shallow children (one more level so the user sees sub-items too).
   return node.children.map((child) => buildShallowTree(child, 0, 1))
 })
+
+/** Directory names skipped during scans on every platform. */
+const SKIPPED_DIR_NAMES = new Set(['node_modules', '$Recycle.Bin', 'System Volume Information'])
+
+/**
+ * Absolute paths skipped during scans on macOS: /System/Volumes contains the
+ * Data volume (already counted via firmlinks such as /Users and /Applications)
+ * and /Volumes holds external drives, which should be scanned individually.
+ */
+const DARWIN_SKIPPED_PATHS = new Set(['/System/Volumes', '/Volumes', '/dev'])
 
 async function scanDir(
   dirPath: string,
@@ -374,6 +473,9 @@ async function scanDir(
   try {
     entries = await fs.promises.readdir(dirPath, { withFileTypes: true })
   } catch {
+    // Typically a permissions error (e.g. macOS TCC-protected folders).
+    // Flag it so the renderer can tell the user why the size reads 0.
+    node.inaccessible = true
     return node
   }
 
@@ -384,7 +486,13 @@ async function scanDir(
 
     if (entry.isDirectory()) {
       // Skip system directories
-      if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === '$Recycle.Bin') {
+      if (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name)) {
+        continue
+      }
+      // On macOS, skip mount points that would double-count data (the Data
+      // volume is already reachable through firmlinks like /Users) or pull in
+      // external drives when scanning from the root.
+      if (process.platform === 'darwin' && DARWIN_SKIPPED_PATHS.has(fullPath)) {
         continue
       }
       const childNode = await scanDir(fullPath, signal, onProgress, counter)

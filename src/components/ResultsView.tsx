@@ -10,11 +10,12 @@ import { useI18n } from '../i18n'
 interface ResultsViewProps {
   data: FileNode
   onBackHome: () => void
+  onRescan: () => void
 }
 
 type ViewMode = 'treemap' | 'list'
 
-export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
+export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewProps) {
   const { t } = useI18n()
   const [viewMode, setViewMode] = useState<ViewMode>('treemap')
   const [currentNode, setCurrentNode] = useState<FileNode>(data)
@@ -64,10 +65,12 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
         setCurrentNode(node)
         setBreadcrumbs((prev) => [...prev, node])
         setSelectedFile(null)
-      } else if (node.childCount && node.childCount > 0) {
-        // Children were omitted from the initial shallow IPC payload — fetch them now.
+      } else {
+        // Children are missing — either omitted from the initial shallow IPC
+        // payload (childCount set) or stripped by the treemap's one-level
+        // copies. Fetch them from the main-process cache.
         const fetched = await window.electronAPI.expandDirectory(node.path)
-        if (fetched) {
+        if (fetched && fetched.length > 0) {
           setExpandedNodes((prev) => new Map(prev).set(node.path, fetched))
           setCurrentNode(node)
           setBreadcrumbs((prev) => [...prev, node])
@@ -111,7 +114,13 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
             >
               {t('app.backToHome')}
             </button>
-            <nav className="flex items-center gap-1 text-sm">
+            <button
+              onClick={onRescan}
+              className="btn-secondary text-sm py-2 px-4 shrink-0"
+            >
+              {t('results.rescan')}
+            </button>
+            <nav className="flex items-center gap-1 text-sm min-w-0 overflow-x-auto whitespace-nowrap">
               {breadcrumbs.map((node, i) => (
                 <span key={i} className="flex items-center gap-1">
                   {i > 0 && <span className="text-sand-400">/</span>}
@@ -129,8 +138,8 @@ export default function ResultsView({ data, onBackHome }: ResultsViewProps) {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-sand-500">
+          <div className="flex items-center gap-4 shrink-0">
+            <span className="text-sm text-sand-500 whitespace-nowrap">
               {formatSize(currentNode.size)} {t('common.total')}
             </span>
             <div className="flex items-center bg-cream-200 rounded-lg p-1">
