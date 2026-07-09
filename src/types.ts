@@ -7,7 +7,8 @@ export interface ElectronAPI {
   platform: string
   getDrives: () => Promise<DiskInfo[]>
   selectDirectory: () => Promise<string | null>
-  scanDirectory: (path: string) => Promise<FileNode | null>
+  scanDirectory: (path: string, includeHidden?: boolean) => Promise<FileNode | null>
+  getTopFiles: (count?: number) => Promise<FileNode[] | null>
   cancelScan: () => Promise<void>
   expandDirectory: (path: string) => Promise<FileNode[] | null>
   revealInFolder: (path: string) => Promise<void>

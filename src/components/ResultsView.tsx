@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileNode } from '../types'
 import Treemap from './Treemap'
 import FileList from './FileList'
+import TopFilesList from './TopFilesList'
 import DetailPanel from './DetailPanel'
 import { formatSize } from '../utils/format'
 import { getCategoryColor, TREEMAP_LEGEND_CATEGORIES } from '../utils/colors'
@@ -13,7 +14,7 @@ interface ResultsViewProps {
   onRescan: () => void
 }
 
-type ViewMode = 'treemap' | 'list'
+type ViewMode = 'treemap' | 'list' | 'topfiles'
 
 export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewProps) {
   const { t } = useI18n()
@@ -27,6 +28,13 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
    * (childCount is set), we fetch them via expand-directory and cache here.
    */
   const [expandedNodes, setExpandedNodes] = useState<Map<string, FileNode[]>>(new Map())
+  const breadcrumbsRef = useRef<HTMLElement>(null)
+
+  // Keep the deepest (current) crumb visible when the trail overflows.
+  useEffect(() => {
+    const nav = breadcrumbsRef.current
+    if (nav) nav.scrollLeft = nav.scrollWidth
+  }, [breadcrumbs])
 
   const getBreadcrumbLabel = useCallback((node: FileNode) => {
     if (node.name) return node.name
@@ -120,7 +128,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             >
               {t('results.rescan')}
             </button>
-            <nav className="flex items-center gap-1 text-sm min-w-0 overflow-x-auto whitespace-nowrap">
+            <nav ref={breadcrumbsRef} className="flex items-center gap-1 text-sm min-w-0 overflow-x-auto whitespace-nowrap">
               {breadcrumbs.map((node, i) => (
                 <span key={i} className="flex items-center gap-1">
                   {i > 0 && <span className="text-sand-400">/</span>}
@@ -163,6 +171,16 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
               >
                 {t('results.list')}
               </button>
+              <button
+                onClick={() => setViewMode('topfiles')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'topfiles'
+                    ? 'bg-white shadow-soft text-gray-800'
+                    : 'text-sand-500 hover:text-gray-700'
+                }`}
+              >
+                {t('results.topFiles')}
+              </button>
             </div>
           </div>
         </div>
@@ -187,10 +205,15 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                 />
               </div>
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
             <FileList
               data={currentNodeForDisplay}
               onSelect={handleDrillDown}
+            />
+          ) : (
+            <TopFilesList
+              totalSize={data.size}
+              onSelect={setSelectedFile}
             />
           )}
         </div>

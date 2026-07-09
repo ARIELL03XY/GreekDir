@@ -12,6 +12,7 @@ export default function App() {
   const [scanData, setScanData] = useState<FileNode | null>(null)
   const [progress, setProgress] = useState<ScanProgress>({ scanned: 0, currentPath: '' })
   const [selectedPath, setSelectedPath] = useState<string>('')
+  const [includeHidden, setIncludeHidden] = useState(false)
 
   const startScan = useCallback(async (dirPath: string) => {
     setSelectedPath(dirPath)
@@ -23,7 +24,7 @@ export default function App() {
     })
 
     try {
-      const result = await window.electronAPI.scanDirectory(dirPath)
+      const result = await window.electronAPI.scanDirectory(dirPath, includeHidden)
       if (result) {
         setScanData(result)
         setState('results')
@@ -37,7 +38,7 @@ export default function App() {
     } finally {
       unsubscribe()
     }
-  }, [])
+  }, [includeHidden])
 
   const handleSelectDirectory = useCallback(async () => {
     const dirPath = await window.electronAPI.selectDirectory()
@@ -73,6 +74,8 @@ export default function App() {
           <WelcomeScreen
             onSelectDirectory={handleSelectDirectory}
             onScanPath={handleScanPath}
+            includeHidden={includeHidden}
+            onIncludeHiddenChange={setIncludeHidden}
           />
         )}
         {state === 'scanning' && (

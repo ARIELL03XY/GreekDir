@@ -392,14 +392,14 @@ ipcMain.handle('select-directory', async () => {
 
 let scanAbortController: AbortController | null = null
 
-ipcMain.handle('scan-directory', async (event, dirPath: string) => {
+ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = false) => {
   scanAbortController = new AbortController()
   const signal = scanAbortController.signal
 
   try {
     const result = await scanDir(dirPath, signal, (progress: ScanProgress) => {
       mainWindow?.webContents.send('scan-progress', progress)
-    })
+    }, includeHidden)
     // Cache the full tree so expand-directory can serve subtrees on demand.
     fullScanCache = result
     // Only send the first MAX_IPC_DEPTH levels to the renderer to keep the
@@ -409,6 +409,26 @@ ipcMain.handle('scan-directory', async (event, dirPath: string) => {
     if (err.name === 'AbortError') return null
     throw err
   }
+})
+
+/**
+ * Returns the `count` largest files of the whole cached scan, size-descending.
+ * Walks iteratively — the tree can hold millions of nodes.
+ */
+ipcMain.handle('get-top-files', (_event, count = 100) => {
+  if (!fullScanCache) return null
+  const files: FileNode[] = []
+  const stack: FileNode[] = [fullScanCache]
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (node.isDirectory) {
+      if (node.children) stack.push(...node.children)
+    } else {
+      files.push(node)
+    }
+  }
+  files.sort((a, b) => b.size - a.size)
+  return files.slice(0, count)
 })
 
 ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {
@@ -456,6 +476,7 @@ async function scanDir(
   dirPath: string,
   signal: AbortSignal,
   onProgress: (info: ScanProgress) => void,
+  includeHidden = false,
   counter = { count: 0 }
 ): Promise<FileNode> {
   if (signal.aborted) throw new DOMException('Scan cancelled', 'AbortError')
@@ -485,17 +506,18 @@ async function scanDir(
     const fullPath = path.join(dirPath, entry.name)
 
     if (entry.isDirectory()) {
-      // Skip system directories
-      if (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name)) {
+      // Skip hidden/system directories unless the user opted in.
+      if (!includeHidden && (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name))) {
         continue
       }
       // On macOS, skip mount points that would double-count data (the Data
       // volume is already reachable through firmlinks like /Users) or pull in
-      // external drives when scanning from the root.
+      // external drives when scanning from the root. Never optional: these
+      // would corrupt totals, not just hide detail.
       if (process.platform === 'darwin' && DARWIN_SKIPPED_PATHS.has(fullPath)) {
         continue
       }
-      const childNode = await scanDir(fullPath, signal, onProgress, counter)
+      const childNode = await scanDir(fullPath, signal, onProgress, includeHidden, counter)
       node.children!.push(childNode)
       node.size += childNode.size
     } else if (entry.isFile()) {

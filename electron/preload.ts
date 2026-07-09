@@ -5,7 +5,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   getDrives: () => ipcRenderer.invoke('get-drives'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
-  scanDirectory: (path: string) => ipcRenderer.invoke('scan-directory', path),
+  scanDirectory: (path: string, includeHidden?: boolean) =>
+    ipcRenderer.invoke('scan-directory', path, includeHidden),
+  getTopFiles: (count?: number) => ipcRenderer.invoke('get-top-files', count),
   cancelScan: () => ipcRenderer.invoke('cancel-scan'),
   expandDirectory: (path: string) => ipcRenderer.invoke('expand-directory', path),
   revealInFolder: (path: string) => ipcRenderer.invoke('reveal-in-folder', path),

@@ -4,9 +4,16 @@ import { useI18n } from '../i18n'
 interface WelcomeScreenProps {
   onSelectDirectory: () => void
   onScanPath: (path: string) => void
+  includeHidden: boolean
+  onIncludeHiddenChange: (value: boolean) => void
 }
 
-export default function WelcomeScreen({ onSelectDirectory, onScanPath }: WelcomeScreenProps) {
+export default function WelcomeScreen({
+  onSelectDirectory,
+  onScanPath,
+  includeHidden,
+  onIncludeHiddenChange,
+}: WelcomeScreenProps) {
   const { t } = useI18n()
 
   return (
@@ -26,12 +33,23 @@ export default function WelcomeScreen({ onSelectDirectory, onScanPath }: Welcome
         </p>
 
         {/* Disk selector */}
-        <div className="text-left mb-10">
+        <div className="text-left mb-6">
           <DiskSelector
             onSelectDisk={onScanPath}
             onSelectCustom={onSelectDirectory}
           />
         </div>
+
+        {/* Scan options */}
+        <label className="flex items-center justify-center gap-2 mb-10 text-sm text-sand-500 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={includeHidden}
+            onChange={(event) => onIncludeHiddenChange(event.target.checked)}
+            className="accent-accent w-4 h-4"
+          />
+          <span>{t('welcome.includeHidden')}</span>
+        </label>
 
         <div className="grid grid-cols-3 gap-6 text-left">
           <div className="p-4 rounded-xl bg-white border border-cream-300">

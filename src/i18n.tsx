@@ -46,6 +46,7 @@ const translations: Record<Language, TranslationDictionary> = {
     'language.spanish': 'Español',
     'results.backToRoot': 'Back to root',
     'results.rescan': 'Rescan',
+    'results.topFiles': 'Top files',
     'results.list': 'List',
     'results.legend': 'Color legend',
     'results.treemap': 'Treemap',
@@ -59,6 +60,7 @@ const translations: Record<Language, TranslationDictionary> = {
     'welcome.featureTreemap': 'Visual treemap',
     'welcome.featureTreemapDescription': 'Block map proportional to file size',
     'welcome.title': 'Analyze your disk usage',
+    'welcome.includeHidden': 'Include hidden and system folders (.git, node_modules…)',
     'category.archives': 'Archives',
     'category.audio': 'Audio',
     'category.code': 'Code',
@@ -104,6 +106,7 @@ const translations: Record<Language, TranslationDictionary> = {
     'language.spanish': 'Español',
     'results.backToRoot': 'Volver a la raíz',
     'results.rescan': 'Reescanear',
+    'results.topFiles': 'Top archivos',
     'results.list': 'Lista',
     'results.legend': 'Leyenda de colores',
     'results.treemap': 'Treemap',
@@ -117,6 +120,7 @@ const translations: Record<Language, TranslationDictionary> = {
     'welcome.featureTreemap': 'Treemap visual',
     'welcome.featureTreemapDescription': 'Mapa de bloques proporcional al tamaño',
     'welcome.title': 'Analiza el uso de tus discos',
+    'welcome.includeHidden': 'Incluir carpetas ocultas y de sistema (.git, node_modules…)',
     'category.archives': 'Archivos comprimidos',
     'category.audio': 'Audio',
     'category.code': 'Código',
@@ -147,11 +151,21 @@ function interpolate(
   }, template)
 }
 
+const LANGUAGE_STORAGE_KEY = 'greekdir-language'
+
+function getInitialLanguage(): Language {
+  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY)
+  if (stored === 'en' || stored === 'es') return stored
+  // First run: follow the OS language.
+  return navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en'
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en')
+  const [language, setLanguage] = useState<Language>(getInitialLanguage)
 
   useEffect(() => {
     document.documentElement.lang = language
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
   }, [language])
 
   const value = useMemo<I18nContextValue>(() => ({
