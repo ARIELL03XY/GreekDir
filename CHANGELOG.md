@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Global search**: the toolbar search box now searches the entire scan (files and folders), largest first, with details and context-menu actions on every result.
+- **Category breakdown**: the treemap view shows a stacked bar of the current folder's bytes by file type, with sizes and percentages.
 - **Dark mode**: light/dark toggle in the header, persisted across sessions and following the OS theme on first run.
 - **Export report**: save the scan as CSV (top 100 files) or JSON (summary + folders + top files) via a native save dialog.
 - **Context menu**: right-click any row or treemap tile for Details / Show in folder / Move to trash.

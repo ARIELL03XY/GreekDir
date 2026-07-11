@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { execFileSync, execSync } from 'child_process'
 import type { DiskInfo, FileNode, ScanProgress } from '../src/shared/types'
+import { getFileCategory, type CategoryBreakdown } from '../src/shared/categories'
 
 function getDisks(): DiskInfo[] {
   const platform = process.platform
@@ -482,6 +483,61 @@ ipcMain.handle('export-report', async () => {
 
   await fs.promises.writeFile(result.filePath, content, 'utf8')
   return result.filePath
+})
+
+/**
+ * Sums file sizes per category for the subtree rooted at `dirPath`
+ * (defaults to the scan root), size-descending.
+ */
+ipcMain.handle('get-category-breakdown', (_event, dirPath?: string) => {
+  if (!fullScanCache) return null
+  const root = dirPath ? findNodeByPath(fullScanCache, dirPath) : fullScanCache
+  if (!root) return null
+
+  const sizes = new Map<string, number>()
+  const stack: FileNode[] = [root]
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (node.isDirectory) {
+      if (node.children) stack.push(...node.children)
+    } else {
+      const category = getFileCategory(node.extension)
+      sizes.set(category, (sizes.get(category) ?? 0) + node.size)
+    }
+  }
+
+  const breakdown: CategoryBreakdown[] = [...sizes.entries()]
+    .map(([category, size]) => ({ category, size }))
+    .sort((a, b) => b.size - a.size)
+  return breakdown
+})
+
+/**
+ * Searches the whole cached scan by name substring (case-insensitive) and
+ * returns the largest `limit` matches. Directory matches are returned
+ * without their children to keep the IPC payload small.
+ */
+ipcMain.handle('search-files', (_event, query: string, limit = 200) => {
+  if (!fullScanCache) return null
+  const needle = query.trim().toLowerCase()
+  if (!needle) return []
+
+  const matches: FileNode[] = []
+  const stack: FileNode[] = [fullScanCache]
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (node.name.toLowerCase().includes(needle)) {
+      matches.push(
+        node.isDirectory
+          ? { ...node, children: undefined, childCount: node.children?.length ?? node.childCount }
+          : node
+      )
+    }
+    if (node.children) stack.push(...node.children)
+  }
+
+  matches.sort((a, b) => b.size - a.size)
+  return matches.slice(0, limit)
 })
 
 ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {

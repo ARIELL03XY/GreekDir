@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FileNode } from '../types'
 import Treemap from './Treemap'
 import FileList from './FileList'
 import TopFilesList from './TopFilesList'
 import DetailPanel from './DetailPanel'
 import ContextMenu, { ContextMenuState } from './ContextMenu'
+import CategoryBar from './CategoryBar'
+import SearchResults from './SearchResults'
 import { formatSize } from '../utils/format'
-import { getCategoryColor, TREEMAP_LEGEND_CATEGORIES } from '../utils/colors'
 import { useI18n } from '../i18n'
 
 interface ResultsViewProps {
@@ -31,8 +32,18 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
   const [expandedNodes, setExpandedNodes] = useState<Map<string, FileNode[]>>(new Map())
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [filter, setFilter] = useState('')
+  const [debouncedFilter, setDebouncedFilter] = useState('')
   const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
   const breadcrumbsRef = useRef<HTMLElement>(null)
+
+  // Debounce the search box so we don't walk the scan tree on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilter(filter), 250)
+    return () => clearTimeout(timer)
+  }, [filter])
+
+  // Global search kicks in from 2 characters; it covers the entire scan.
+  const searchActive = debouncedFilter.trim().length >= 2
 
   const openContextMenu = useCallback(
     (event: { clientX: number; clientY: number; preventDefault: () => void }, node: FileNode) => {
@@ -117,11 +128,6 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
     setSelectedFile(null)
   }, [breadcrumbs])
 
-  const legendItems = useMemo(() => TREEMAP_LEGEND_CATEGORIES.map((category) => ({
-    category,
-    color: getCategoryColor(category),
-  })), [])
-
   // The node passed to child components always carries its effective children.
   const currentNodeForDisplay = withExpandedChildren(currentNode)
 
@@ -173,15 +179,13 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             </nav>
           </div>
           <div className="flex items-center gap-4 shrink-0">
-            {viewMode !== 'treemap' && (
-              <input
-                type="text"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                placeholder={t('results.filterPlaceholder')}
-                className="w-44 rounded-lg border border-cream-300 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-sand-400 outline-none focus:border-accent/50"
-              />
-            )}
+            <input
+              type="text"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder={t('results.searchPlaceholder')}
+              className="w-44 rounded-lg border border-cream-300 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-sand-400 outline-none focus:border-accent/50"
+            />
             <span className="text-sm text-sand-500 whitespace-nowrap">
               {formatSize(currentNode.size)} {t('common.total')}
             </span>
@@ -221,17 +225,16 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
         </div>
 
         <div className="flex-1 overflow-hidden p-4">
-          {viewMode === 'treemap' ? (
+          {searchActive ? (
+            <SearchResults
+              query={debouncedFilter}
+              totalSize={data.size}
+              onSelect={setSelectedFile}
+              onContextMenu={openContextMenu}
+            />
+          ) : viewMode === 'treemap' ? (
             <div className="h-full flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-cream-300 bg-surface px-4 py-3 text-xs text-sand-500">
-                <span className="font-medium text-ink-soft">{t('results.legend')}</span>
-                {legendItems.map(({ category, color }) => (
-                  <span key={category} className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
-                    <span>{t(`category.${category}`)}</span>
-                  </span>
-                ))}
-              </div>
+              <CategoryBar path={currentNode.path} />
               <div className="min-h-0 flex-1">
                 <Treemap
                   data={currentNodeForDisplay}
@@ -245,14 +248,12 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             <FileList
               data={currentNodeForDisplay}
               onSelect={handleDrillDown}
-              filter={filter}
               onContextMenu={openContextMenu}
             />
           ) : (
             <TopFilesList
               totalSize={data.size}
               onSelect={setSelectedFile}
-              filter={filter}
               onContextMenu={openContextMenu}
             />
           )}

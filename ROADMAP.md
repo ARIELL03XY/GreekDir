@@ -25,6 +25,6 @@
 - ~~Modo oscuro.~~ ✅
 - ~~Ordenar la lista por columnas (nombre/tamaño).~~ ✅
 - ~~Exportación de resultados y reportes.~~ ✅ (CSV/JSON)
-- Desglose por categoría de archivo (porcentaje por tipo).
-- Buscador global (hoy el filtro actúa sobre la vista actual).
+- ~~Desglose por categoría de archivo (porcentaje por tipo).~~ ✅
+- ~~Buscador global.~~ ✅
 - Evaluar soporte para más plataformas.

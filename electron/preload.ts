@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('scan-directory', path, includeHidden),
   getTopFiles: (count?: number) => ipcRenderer.invoke('get-top-files', count),
   exportReport: () => ipcRenderer.invoke('export-report'),
+  getCategoryBreakdown: (path?: string) => ipcRenderer.invoke('get-category-breakdown', path),
+  searchFiles: (query: string, limit?: number) => ipcRenderer.invoke('search-files', query, limit),
   cancelScan: () => ipcRenderer.invoke('cancel-scan'),
   expandDirectory: (path: string) => ipcRenderer.invoke('expand-directory', path),
   revealInFolder: (path: string) => ipcRenderer.invoke('reveal-in-folder', path),
