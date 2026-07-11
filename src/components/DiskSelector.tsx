@@ -49,7 +49,7 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
                 <button
                   key={i}
                   onClick={() => onSelectDisk(disk.path)}
-                  className="p-4 rounded-xl bg-white border border-cream-300 hover:border-accent/40 hover:shadow-medium transition-all text-left group"
+                  className="p-4 rounded-xl bg-surface border border-cream-300 hover:border-accent/40 hover:shadow-medium transition-all text-left group"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent/10 to-accent/5 flex items-center justify-center">
@@ -59,7 +59,7 @@ export default function DiskSelector({ onSelectDisk, onSelectCustom }: DiskSelec
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate group-hover:text-accent transition-colors">
+                      <p className="font-medium text-ink truncate group-hover:text-accent transition-colors">
                         {disk.name}
                       </p>
                       <p className="text-xs text-sand-400 font-mono truncate">

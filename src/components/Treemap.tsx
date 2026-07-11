@@ -8,12 +8,13 @@ interface TreemapProps {
   data: FileNode
   onSelect: (node: FileNode) => void
   selectedFile: FileNode | null
+  onContextMenu?: (event: MouseEvent, node: FileNode) => void
 }
 
 /** Maximum number of tiles rendered at once to keep the DOM manageable. */
 const MAX_VISIBLE_NODES = 500
 
-export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) {
+export default function Treemap({ data, onSelect, selectedFile, onContextMenu }: TreemapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -102,6 +103,10 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       .on('click', (_, d) => {
         if (d.data.path !== '__others__') onSelect(d.data)
       })
+      .on('contextmenu', (event: MouseEvent, d) => {
+        event.preventDefault()
+        if (d.data.path !== '__others__') onContextMenu?.(event, d.data)
+      })
 
     // Rectangles
     cell.append('rect')
@@ -153,7 +158,7 @@ export default function Treemap({ data, onSelect, selectedFile }: TreemapProps) 
       .style('pointer-events', 'none')
       .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
-  }, [containerSize, hierarchy, onSelect, selectedFile])
+  }, [containerSize, hierarchy, onSelect, selectedFile, onContextMenu])
 
   useEffect(() => {
     const container = containerRef.current

@@ -4,6 +4,7 @@ import Treemap from './Treemap'
 import FileList from './FileList'
 import TopFilesList from './TopFilesList'
 import DetailPanel from './DetailPanel'
+import ContextMenu, { ContextMenuState } from './ContextMenu'
 import { formatSize } from '../utils/format'
 import { getCategoryColor, TREEMAP_LEGEND_CATEGORIES } from '../utils/colors'
 import { useI18n } from '../i18n'
@@ -28,7 +29,26 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
    * (childCount is set), we fetch them via expand-directory and cache here.
    */
   const [expandedNodes, setExpandedNodes] = useState<Map<string, FileNode[]>>(new Map())
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [filter, setFilter] = useState('')
+  const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
   const breadcrumbsRef = useRef<HTMLElement>(null)
+
+  const openContextMenu = useCallback(
+    (event: { clientX: number; clientY: number; preventDefault: () => void }, node: FileNode) => {
+      event.preventDefault()
+      setContextMenu({ x: event.clientX, y: event.clientY, node })
+    },
+    []
+  )
+
+  const handleExport = useCallback(async () => {
+    const savedPath = await window.electronAPI.exportReport()
+    if (savedPath) {
+      setExportState('done')
+      setTimeout(() => setExportState('idle'), 2500)
+    }
+  }, [])
 
   // Keep the deepest (current) crumb visible when the trail overflows.
   useEffect(() => {
@@ -108,7 +128,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
   return (
     <div className="h-full flex">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-6 py-3 border-b border-cream-300 flex items-center justify-between bg-white/50">
+        <div className="px-6 py-3 border-b border-cream-300 flex items-center justify-between bg-surface/50">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => handleBreadcrumb(0)}
@@ -128,6 +148,12 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             >
               {t('results.rescan')}
             </button>
+            <button
+              onClick={handleExport}
+              className="btn-secondary text-sm py-2 px-4 shrink-0"
+            >
+              {exportState === 'done' ? t('results.exported') : t('results.export')}
+            </button>
             <nav ref={breadcrumbsRef} className="flex items-center gap-1 text-sm min-w-0 overflow-x-auto whitespace-nowrap">
               {breadcrumbs.map((node, i) => (
                 <span key={i} className="flex items-center gap-1">
@@ -136,8 +162,8 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                     onClick={() => handleBreadcrumb(i)}
                     className={`px-2 py-1 rounded-md transition-colors ${
                       i === breadcrumbs.length - 1
-                        ? 'text-gray-800 font-medium bg-cream-200'
-                        : 'text-sand-500 hover:text-gray-700 hover:bg-cream-200'
+                        ? 'text-ink font-medium bg-cream-200'
+                        : 'text-sand-500 hover:text-ink-soft hover:bg-cream-200'
                     }`}
                   >
                     {getBreadcrumbLabel(node)}
@@ -147,6 +173,15 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             </nav>
           </div>
           <div className="flex items-center gap-4 shrink-0">
+            {viewMode !== 'treemap' && (
+              <input
+                type="text"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                placeholder={t('results.filterPlaceholder')}
+                className="w-44 rounded-lg border border-cream-300 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-sand-400 outline-none focus:border-accent/50"
+              />
+            )}
             <span className="text-sm text-sand-500 whitespace-nowrap">
               {formatSize(currentNode.size)} {t('common.total')}
             </span>
@@ -155,8 +190,8 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                 onClick={() => setViewMode('treemap')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   viewMode === 'treemap'
-                    ? 'bg-white shadow-soft text-gray-800'
-                    : 'text-sand-500 hover:text-gray-700'
+                    ? 'bg-surface shadow-soft text-ink'
+                    : 'text-sand-500 hover:text-ink-soft'
                 }`}
               >
                 {t('results.treemap')}
@@ -165,8 +200,8 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                 onClick={() => setViewMode('list')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   viewMode === 'list'
-                    ? 'bg-white shadow-soft text-gray-800'
-                    : 'text-sand-500 hover:text-gray-700'
+                    ? 'bg-surface shadow-soft text-ink'
+                    : 'text-sand-500 hover:text-ink-soft'
                 }`}
               >
                 {t('results.list')}
@@ -175,8 +210,8 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                 onClick={() => setViewMode('topfiles')}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                   viewMode === 'topfiles'
-                    ? 'bg-white shadow-soft text-gray-800'
-                    : 'text-sand-500 hover:text-gray-700'
+                    ? 'bg-surface shadow-soft text-ink'
+                    : 'text-sand-500 hover:text-ink-soft'
                 }`}
               >
                 {t('results.topFiles')}
@@ -188,8 +223,8 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
         <div className="flex-1 overflow-hidden p-4">
           {viewMode === 'treemap' ? (
             <div className="h-full flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-cream-300 bg-white px-4 py-3 text-xs text-sand-500">
-                <span className="font-medium text-gray-700">{t('results.legend')}</span>
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-cream-300 bg-surface px-4 py-3 text-xs text-sand-500">
+                <span className="font-medium text-ink-soft">{t('results.legend')}</span>
                 {legendItems.map(({ category, color }) => (
                   <span key={category} className="flex items-center gap-2">
                     <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
@@ -202,6 +237,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
                   data={currentNodeForDisplay}
                   onSelect={handleDrillDown}
                   selectedFile={selectedFile}
+                  onContextMenu={openContextMenu}
                 />
               </div>
             </div>
@@ -209,11 +245,15 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
             <FileList
               data={currentNodeForDisplay}
               onSelect={handleDrillDown}
+              filter={filter}
+              onContextMenu={openContextMenu}
             />
           ) : (
             <TopFilesList
               totalSize={data.size}
               onSelect={setSelectedFile}
+              filter={filter}
+              onContextMenu={openContextMenu}
             />
           )}
         </div>
@@ -224,6 +264,14 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
           file={selectedFile}
           totalSize={currentNode.size}
           onClose={() => setSelectedFile(null)}
+        />
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          menu={contextMenu}
+          onShowDetails={setSelectedFile}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

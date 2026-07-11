@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   scanDirectory: (path: string, includeHidden?: boolean) =>
     ipcRenderer.invoke('scan-directory', path, includeHidden),
   getTopFiles: (count?: number) => ipcRenderer.invoke('get-top-files', count),
+  exportReport: () => ipcRenderer.invoke('export-report'),
   cancelScan: () => ipcRenderer.invoke('cancel-scan'),
   expandDirectory: (path: string) => ipcRenderer.invoke('expand-directory', path),
   revealInFolder: (path: string) => ipcRenderer.invoke('reveal-in-folder', path),

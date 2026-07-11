@@ -3,8 +3,35 @@
 @tailwind utilities;
 
 @layer base {
+  /* Theme palette — RGB channels consumed by tailwind.config.js. */
+  :root {
+    --surface: 255 255 255;
+    --cream-100: 250 249 247;
+    --cream-200: 245 243 240;
+    --cream-300: 235 232 228;
+    --sand-300: 212 206 197;
+    --sand-400: 184 175 163;
+    --sand-500: 156 145 131;
+    --ink: 31 41 55;
+    --ink-soft: 55 65 81;
+    --ink-mute: 75 85 99;
+  }
+
+  .dark {
+    --surface: 33 33 38;
+    --cream-100: 23 23 26;
+    --cream-200: 42 42 48;
+    --cream-300: 58 58 66;
+    --sand-300: 82 82 91;
+    --sand-400: 134 134 145;
+    --sand-500: 168 168 178;
+    --ink: 244 244 245;
+    --ink-soft: 212 212 216;
+    --ink-mute: 161 161 170;
+  }
+
   body {
-    @apply bg-cream-100 text-gray-800;
+    @apply bg-cream-100 text-ink;
   }
   
   ::-webkit-scrollbar {
@@ -40,7 +67,7 @@
   }
 
   .card {
-    @apply bg-white rounded-2xl shadow-soft border border-cream-300 p-6;
+    @apply bg-surface rounded-2xl shadow-soft border border-cream-300 p-6;
   }
   
   .btn-primary {
@@ -50,7 +77,7 @@
   }
   
   .btn-secondary {
-    @apply bg-cream-200 text-gray-700 px-6 py-3 rounded-xl font-medium
+    @apply bg-cream-200 text-ink-soft px-6 py-3 rounded-xl font-medium
            hover:bg-cream-300 transition-all duration-200
            border border-cream-300 active:scale-[0.98];
   }

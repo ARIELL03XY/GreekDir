@@ -9,6 +9,8 @@ export interface FileNode {
   childCount?: number
   /** True when the directory could not be read (usually a permissions error). */
   inaccessible?: boolean
+  /** Last-modified time in ms since epoch (files only). */
+  mtime?: number
 }
 
 export interface DiskInfo {

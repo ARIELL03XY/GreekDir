@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, shell, type MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execFileSync, execSync } from 'child_process'
@@ -283,7 +283,8 @@ function createWindow() {
     // 'hiddenInset' is macOS-only; keep the native frame elsewhere so Windows
     // retains its standard window controls.
     ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const } : {}),
-    backgroundColor: '#FAF9F7',
+    // Match the OS theme so the pre-load flash isn't blinding in dark mode.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#17171A' : '#FAF9F7',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -415,10 +416,9 @@ ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = 
  * Returns the `count` largest files of the whole cached scan, size-descending.
  * Walks iteratively — the tree can hold millions of nodes.
  */
-ipcMain.handle('get-top-files', (_event, count = 100) => {
-  if (!fullScanCache) return null
+function collectTopFiles(root: FileNode, count: number): FileNode[] {
   const files: FileNode[] = []
-  const stack: FileNode[] = [fullScanCache]
+  const stack: FileNode[] = [root]
   while (stack.length > 0) {
     const node = stack.pop()!
     if (node.isDirectory) {
@@ -429,6 +429,59 @@ ipcMain.handle('get-top-files', (_event, count = 100) => {
   }
   files.sort((a, b) => b.size - a.size)
   return files.slice(0, count)
+}
+
+ipcMain.handle('get-top-files', (_event, count = 100) => {
+  if (!fullScanCache) return null
+  return collectTopFiles(fullScanCache, count)
+})
+
+/**
+ * Saves a scan report via a native save dialog. The format follows the chosen
+ * file extension: .json gets a structured summary, anything else gets CSV of
+ * the top files. Returns the saved path, or null if cancelled.
+ */
+ipcMain.handle('export-report', async () => {
+  if (!fullScanCache || !mainWindow) return null
+
+  const date = new Date().toISOString().slice(0, 10)
+  const result = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: `greekdir-report-${date}.csv`,
+    filters: [
+      { name: 'CSV', extensions: ['csv'] },
+      { name: 'JSON', extensions: ['json'] },
+    ],
+  })
+  if (result.canceled || !result.filePath) return null
+
+  const root = fullScanCache
+  const topFiles = collectTopFiles(root, 100)
+
+  let content: string
+  if (result.filePath.toLowerCase().endsWith('.json')) {
+    content = JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        root: { path: root.path, size: root.size },
+        folders: (root.children ?? [])
+          .filter((c) => c.isDirectory)
+          .map((c) => ({ path: c.path, size: c.size })),
+        topFiles: topFiles.map((f) => ({ path: f.path, size: f.size })),
+      },
+      null,
+      2
+    )
+  } else {
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
+    const lines = ['rank,size_bytes,path']
+    topFiles.forEach((f, i) => {
+      lines.push(`${i + 1},${f.size},${escapeCsv(f.path)}`)
+    })
+    content = lines.join('\n') + '\n'
+  }
+
+  await fs.promises.writeFile(result.filePath, content, 'utf8')
+  return result.filePath
 })
 
 ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {
@@ -530,6 +583,7 @@ async function scanDir(
           size: stats.size,
           isDirectory: false,
           extension: ext,
+          mtime: stats.mtimeMs,
         })
         node.size += stats.size
       } catch {

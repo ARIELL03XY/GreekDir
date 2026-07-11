@@ -8,15 +8,22 @@ interface TopFilesListProps {
   /** Total size of the scanned root, for percentage display. */
   totalSize: number
   onSelect: (node: FileNode) => void
+  /** Case-insensitive name/extension/path filter. */
+  filter?: string
+  onContextMenu?: (event: React.MouseEvent, node: FileNode) => void
 }
 
 /**
  * Shows the largest files of the entire scan (not just the current folder),
  * fetched from the main-process cache.
  */
-export default function TopFilesList({ totalSize, onSelect }: TopFilesListProps) {
+export default function TopFilesList({ totalSize, onSelect, filter = '', onContextMenu }: TopFilesListProps) {
   const { t } = useI18n()
   const [files, setFiles] = useState<FileNode[] | null>(null)
+  const query = filter.trim().toLowerCase()
+  const visibleFiles = (files ?? []).filter(
+    (file) => !query || file.name.toLowerCase().includes(query) || file.path.toLowerCase().includes(query)
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -37,7 +44,7 @@ export default function TopFilesList({ totalSize, onSelect }: TopFilesListProps)
   }
 
   return (
-    <div className="h-full overflow-auto rounded-xl bg-white border border-cream-300">
+    <div className="h-full overflow-auto rounded-xl bg-surface border border-cream-300">
       <table className="w-full text-sm">
         <thead className="sticky top-0 bg-cream-100 border-b border-cream-300">
           <tr>
@@ -48,10 +55,11 @@ export default function TopFilesList({ totalSize, onSelect }: TopFilesListProps)
           </tr>
         </thead>
         <tbody>
-          {files.map((file, i) => (
+          {visibleFiles.map((file, i) => (
             <tr
               key={file.path}
               onClick={() => onSelect(file)}
+              onContextMenu={(event) => onContextMenu?.(event, file)}
               className="border-b border-cream-200 hover:bg-cream-100 cursor-pointer transition-colors group"
             >
               <td className="px-4 py-3 text-right text-xs text-sand-400 font-mono">{i + 1}</td>
@@ -67,7 +75,7 @@ export default function TopFilesList({ totalSize, onSelect }: TopFilesListProps)
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 text-right font-mono text-xs text-gray-600">
+              <td className="px-4 py-3 text-right font-mono text-xs text-ink-mute">
                 {formatSize(file.size)}
               </td>
               <td className="px-4 py-3 text-right text-xs text-sand-500">
@@ -77,7 +85,7 @@ export default function TopFilesList({ totalSize, onSelect }: TopFilesListProps)
           ))}
         </tbody>
       </table>
-      {files.length === 0 && (
+      {visibleFiles.length === 0 && (
         <div className="p-8 text-center text-sand-400">{t('file.emptyFolder')}</div>
       )}
     </div>

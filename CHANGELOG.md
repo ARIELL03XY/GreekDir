@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Dark mode**: light/dark toggle in the header, persisted across sessions and following the OS theme on first run.
+- **Export report**: save the scan as CSV (top 100 files) or JSON (summary + folders + top files) via a native save dialog.
+- **Context menu**: right-click any row or treemap tile for Details / Show in folder / Move to trash.
+- **Column sorting**: click Name or Size in the list view to reorder.
+- **Filter box**: filter the list and top-files views by name or extension.
+- **Modified date**: files now carry their last-modified date, shown in the detail panel.
 - **Top files view**: ranked list of the 100 largest files across the whole scan, with full path, share of total, and quick actions.
 - **File actions**: "Show in folder" (Finder/Explorer) and "Move to trash" (with two-step confirmation) from the detail panel.
 - **Rescan button** in the results toolbar to refresh the current folder.

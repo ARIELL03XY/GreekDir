@@ -20,7 +20,7 @@ export default function ScanningView({ progress, onCancel }: ScanningViewProps) 
           <div className="absolute inset-0 rounded-full border-4 border-cream-300" />
           <div className="absolute inset-0 rounded-full border-4 border-accent border-t-transparent animate-spin" />
         </div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">
+        <h2 className="text-xl font-semibold text-ink mb-2">
           {t('scan.title')}
         </h2>
         <p className="text-sand-500 mb-2">

@@ -13,7 +13,7 @@ interface DetailPanelProps {
 type TrashState = 'idle' | 'confirm' | 'done' | 'error'
 
 export default function DetailPanel({ file, totalSize, onClose }: DetailPanelProps) {
-  const { t } = useI18n()
+  const { language, t } = useI18n()
   const [trashState, setTrashState] = useState<TrashState>('idle')
   const category = file.isDirectory ? 'directories' : getFileCategory(file.extension)
   const color = file.isDirectory ? DIRECTORY_COLOR : getFileColor(file.extension)
@@ -34,9 +34,9 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
   }
 
   return (
-    <div className="w-80 border-l border-cream-300 bg-white p-6 overflow-auto">
+    <div className="w-80 border-l border-cream-300 bg-surface p-6 overflow-auto">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-semibold text-gray-800">{t('detail.title')}</h3>
+        <h3 className="font-semibold text-ink">{t('detail.title')}</h3>
         <button
           onClick={onClose}
           className="w-7 h-7 rounded-lg bg-cream-200 flex items-center justify-center hover:bg-cream-300 transition-colors"
@@ -55,7 +55,7 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
             style={{ backgroundColor: color }}
           />
           <div>
-            <p className="font-medium text-gray-800 text-sm">{file.name}</p>
+            <p className="font-medium text-ink text-sm">{file.name}</p>
             <p className="text-xs text-sand-500">{t(`category.${category}`)}</p>
           </div>
         </div>
@@ -80,12 +80,24 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
             <span className="text-sm text-sand-500">{t('detail.type')}</span>
             <span className="text-sm">{file.isDirectory ? t('file.directory') : t('file.file')}</span>
           </div>
+          {file.mtime !== undefined && (
+            <div className="flex justify-between items-center py-2 border-b border-cream-200">
+              <span className="text-sm text-sand-500">{t('detail.modified')}</span>
+              <span className="text-sm font-mono">
+                {new Date(file.mtime).toLocaleDateString(language === 'es' ? 'es' : 'en', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Path */}
         <div>
           <p className="text-xs text-sand-500 mb-1">{t('detail.fullPath')}</p>
-          <p className="text-xs font-mono text-gray-600 bg-cream-100 rounded-lg p-3 break-all">
+          <p className="text-xs font-mono text-ink-mute bg-cream-100 rounded-lg p-3 break-all">
             {file.path}
           </p>
         </div>
@@ -116,7 +128,7 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
 
         {/* Permissions warning */}
         {file.inaccessible && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-950 dark:border-amber-800 rounded-lg p-3">
             {t('file.noAccess')}
           </p>
         )}
@@ -139,7 +151,7 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
               className={`text-sm w-full py-2 px-6 rounded-xl font-medium transition-all duration-200 border active:scale-[0.98] ${
                 trashState === 'confirm'
                   ? 'bg-red-500 text-white border-red-600 hover:bg-red-600'
-                  : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                  : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 dark:bg-red-950 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900'
               }`}
             >
               {trashState === 'confirm' ? t('detail.trashConfirm') : t('detail.trash')}

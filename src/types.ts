@@ -9,6 +9,7 @@ export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   scanDirectory: (path: string, includeHidden?: boolean) => Promise<FileNode | null>
   getTopFiles: (count?: number) => Promise<FileNode[] | null>
+  exportReport: () => Promise<string | null>
   cancelScan: () => Promise<void>
   expandDirectory: (path: string) => Promise<FileNode[] | null>
   revealInFolder: (path: string) => Promise<void>
