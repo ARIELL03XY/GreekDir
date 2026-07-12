@@ -54,6 +54,19 @@ header.site .container {
   display: flex; align-items: center; justify-content: center;
 }
 .brand .logo svg { width: 16px; height: 16px; stroke: #fff; }
+.brand .logo-img { width: 34px; height: 34px; display: block; }
+
+.hero-icon {
+  width: 104px; height: 104px; margin: 0 auto 1.4rem; display: block;
+  filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.15));
+}
+
+.btn.coming {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  cursor: default;
+}
 
 nav { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
 nav a { color: rgb(var(--muted)); text-decoration: none; }
