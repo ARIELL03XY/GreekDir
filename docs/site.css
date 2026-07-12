@@ -1,0 +1,129 @@
+/* GreekDir site — shared styles. Palette mirrors the app (src/index.css). */
+:root {
+  --surface: 255 255 255;
+  --bg: 250 249 247;
+  --bg-soft: 245 243 240;
+  --border: 235 232 228;
+  --muted: 156 145 131;
+  --ink: 31 41 55;
+  --ink-soft: 55 65 81;
+  --accent: #C97B4A;
+  --accent-dark: #8B5E3C;
+}
+
+html.dark {
+  --surface: 33 33 38;
+  --bg: 23 23 26;
+  --bg-soft: 42 42 48;
+  --border: 58 58 66;
+  --muted: 168 168 178;
+  --ink: 244 244 245;
+  --ink-soft: 212 212 216;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Language toggle: body carries lang-es or lang-en. */
+body.lang-es .en { display: none !important; }
+body.lang-en .es { display: none !important; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
+
+header.site {
+  position: sticky; top: 0; z-index: 10;
+  background: rgb(var(--surface) / 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgb(var(--border));
+}
+header.site .container {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 0.9rem; padding-bottom: 0.9rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: rgb(var(--ink)); font-weight: 600; font-size: 1.1rem; }
+.brand .logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  display: flex; align-items: center; justify-content: center;
+}
+.brand .logo svg { width: 16px; height: 16px; stroke: #fff; }
+
+nav { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }
+nav a { color: rgb(var(--muted)); text-decoration: none; }
+nav a:hover { color: rgb(var(--ink)); }
+.pill-btn {
+  border: 1px solid rgb(var(--border)); background: rgb(var(--surface));
+  color: rgb(var(--ink-soft)); border-radius: 8px; padding: 0.3rem 0.6rem;
+  font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+.pill-btn:hover { background: rgb(var(--bg-soft)); }
+
+.hero { text-align: center; padding: 4.5rem 0 3rem; }
+.hero h1 { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; }
+.hero p.tagline { font-size: 1.2rem; color: rgb(var(--muted)); margin: 0.8rem auto 2rem; max-width: 34rem; }
+
+.btn-row { display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.8rem 1.6rem; border-radius: 12px; text-decoration: none;
+  font-weight: 500; font-size: 0.95rem; transition: all 0.15s;
+}
+.btn.primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgb(0 0 0 / 0.08); }
+.btn.primary:hover { background: var(--accent-dark); }
+.btn.secondary { background: rgb(var(--bg-soft)); color: rgb(var(--ink-soft)); border: 1px solid rgb(var(--border)); }
+.btn.secondary:hover { background: rgb(var(--border)); }
+.hint { font-size: 0.8rem; color: rgb(var(--muted)); margin-top: 0.8rem; }
+
+.shot { margin: 3rem auto 0; max-width: 880px; }
+.shot img {
+  width: 100%; height: auto; display: block; border-radius: 14px;
+  border: 1px solid rgb(var(--border));
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.12);
+}
+html.dark .shot img.light-only, html:not(.dark) .shot img.dark-only { display: none; }
+
+.features { padding: 4rem 0; }
+.features h2, .downloads h2 { text-align: center; font-size: 1.6rem; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
+.card {
+  background: rgb(var(--surface)); border: 1px solid rgb(var(--border));
+  border-radius: 14px; padding: 1.4rem;
+}
+.card .icon { font-size: 1.4rem; margin-bottom: 0.6rem; }
+.card h3 { font-size: 1rem; margin-bottom: 0.3rem; }
+.card p { font-size: 0.9rem; color: rgb(var(--muted)); }
+
+.downloads { padding: 1rem 0 4rem; }
+
+footer.site {
+  border-top: 1px solid rgb(var(--border));
+  padding: 2rem 0; font-size: 0.85rem; color: rgb(var(--muted));
+}
+footer.site .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+footer.site a { color: rgb(var(--muted)); }
+footer.site a:hover { color: rgb(var(--ink)); }
+
+/* Inner pages (privacy / support) */
+main.doc { padding: 3rem 0 4rem; max-width: 720px; margin: 0 auto; }
+main.doc h1 { font-size: 1.9rem; margin-bottom: 1.5rem; }
+main.doc h2 { font-size: 1.2rem; margin: 1.8rem 0 0.6rem; }
+main.doc p, main.doc li { color: rgb(var(--ink-soft)); }
+main.doc a { color: var(--accent); }
+main.doc a:hover { color: var(--accent-dark); }
+main.doc ul { padding-left: 1.4rem; }
+main.doc code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+  background: rgb(var(--bg-soft)); padding: 0.1em 0.4em; border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+  .hero h1 { font-size: 2rem; }
+  header.site nav a.doc-link { display: none; }
+}
