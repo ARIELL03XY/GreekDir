@@ -134,7 +134,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
   return (
     <div className="h-full flex">
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-6 py-3 border-b border-cream-300 flex items-center justify-between bg-surface/50">
+        <div className="px-6 py-3 border-b border-cream-300 flex flex-wrap items-center justify-between gap-y-2 bg-surface/50">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => handleBreadcrumb(0)}

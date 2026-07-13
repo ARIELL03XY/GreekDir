@@ -17,7 +17,7 @@ npm run build:store  # Microsoft Store APPX -> release/ (requires GREEKDIR_IDENT
                      #   GREEKDIR_PUBLISHER, GREEKDIR_PUBLISHER_DISPLAY_NAME env vars)
 ```
 
-There is no test runner configured. Use `npm run lint` and `tsc` (via `npm run build`) as the verification gates.
+There is no test runner configured. Use `npm run lint` and `tsc` (via `npm run build`) as the verification gates. To verify a change actually works at runtime (build + launch Electron + drive it via CDP), use the `verify` skill (`.claude/skills/verify/SKILL.md`).
 
 ## Architecture
 
@@ -29,7 +29,7 @@ The app has a two-process split; the IPC boundary is the most important thing to
 - **Renderer** (`src/`): React UI. `App.tsx` is a 3-state machine (`idle` → `scanning` → `results`) that drives which top-level view renders.
 
 ### Shared types
-`src/shared/types.ts` is the single source of truth for `FileNode`, `DiskInfo`, `ScanProgress` — imported by both the Electron and React sides. `src/types.ts` re-exports these and adds the `ElectronAPI` window typing. Keep these in sync when changing the data model.
+`src/shared/types.ts` is the single source of truth for `FileNode`, `DiskInfo`, `ScanProgress` — imported by both the Electron and React sides. `src/shared/categories.ts` similarly holds the extension→category map (`getFileCategory`) used by both the renderer (file-type colors) and the main process (`get-category-breakdown` IPC handler) — keep it as the one place that mapping lives. `src/types.ts` re-exports these and adds the `ElectronAPI` window typing. Keep these in sync when changing the data model.
 
 ### Scanning & the shallow-tree/lazy-expand pattern (critical for performance)
 A full recursive scan of a large drive produces a `FileNode` tree far too big to send over IPC or render at once. The scan avoids UI freezes with this design in `electron/main.ts`:
