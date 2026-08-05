@@ -24,7 +24,7 @@ There is no test runner configured. Use `npm run lint` and `tsc` (via `npm run b
 The app has a two-process split; the IPC boundary is the most important thing to understand before changing scanning or data flow.
 
 ### Process boundary
-- **Main process** (`electron/main.ts`): filesystem scanning, disk enumeration, all IPC handlers. Runs in Node.
+- **Main process** (`electron/main.ts`): filesystem scanning, disk enumeration, all IPC handlers — `get-drives`, `select-directory`, `scan-directory`, `cancel-scan`, `expand-directory`, `get-top-files`, `get-category-breakdown`, `search-files`, `export-report`, `reveal-in-folder`, `move-to-trash`. Runs in Node.
 - **Preload** (`electron/preload.ts`): the only bridge. Exposes `window.electronAPI` via `contextBridge`. Any new main↔renderer call must be added in three places — `electron/main.ts` (`ipcMain.handle`), `electron/preload.ts` (expose method), and `src/types.ts` (`ElectronAPI` interface).
 - **Renderer** (`src/`): React UI. `App.tsx` is a 3-state machine (`idle` → `scanning` → `results`) that drives which top-level view renders.
 
@@ -45,6 +45,9 @@ If you change `MAX_IPC_DEPTH`, the IPC payload size, or the scan-recursion, keep
 
 ### i18n
 `src/i18n.tsx` is a self-contained context provider (no external lib) with `en`/`es` dictionaries and a `{{placeholder}}` interpolation convention. Add UI strings as keys in both language dictionaries rather than hardcoding text in components.
+
+### Theming
+`src/theme.ts` (`useTheme` hook) tracks light/dark state, persists it to `localStorage`, and toggles the `dark` class on `<html>` — Tailwind is configured with `darkMode: 'class'` (`tailwind.config.js`), so components style dark mode via `dark:` variants rather than a CSS-variable or context-based theme.
 
 ## Path alias
 `@` resolves to `./src` (configured in both `vite.config.ts` and `tsconfig.json`).
