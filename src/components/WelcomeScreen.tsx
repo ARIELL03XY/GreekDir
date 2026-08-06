@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import DiskSelector from './DiskSelector'
 import { useI18n } from '../i18n'
 
@@ -6,6 +7,8 @@ interface WelcomeScreenProps {
   onScanPath: (path: string) => void
   includeHidden: boolean
   onIncludeHiddenChange: (value: boolean) => void
+  excludePatterns: string[]
+  onExcludePatternsChange: (patterns: string[]) => void
 }
 
 export default function WelcomeScreen({
@@ -13,8 +16,26 @@ export default function WelcomeScreen({
   onScanPath,
   includeHidden,
   onIncludeHiddenChange,
+  excludePatterns,
+  onExcludePatternsChange,
 }: WelcomeScreenProps) {
   const { t } = useI18n()
+  const [excludeInput, setExcludeInput] = useState('')
+
+  const addExcludePattern = () => {
+    const value = excludeInput.trim()
+    if (!value) return
+    if (excludePatterns.some((p) => p.toLowerCase() === value.toLowerCase())) {
+      setExcludeInput('')
+      return
+    }
+    onExcludePatternsChange([...excludePatterns, value])
+    setExcludeInput('')
+  }
+
+  const removeExcludePattern = (pattern: string) => {
+    onExcludePatternsChange(excludePatterns.filter((p) => p !== pattern))
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -51,6 +72,47 @@ export default function WelcomeScreen({
             />
             <span>{t('welcome.includeHidden')}</span>
           </label>
+
+          {/* Exclude filters */}
+          <div className="mb-10 text-left">
+            <div className="flex items-center gap-2 flex-wrap justify-center mb-2">
+              <input
+                type="text"
+                value={excludeInput}
+                onChange={(event) => setExcludeInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    addExcludePattern()
+                  }
+                }}
+                placeholder={t('welcome.excludePlaceholder')}
+                className="w-48 rounded-lg border border-cream-300 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-sand-400 outline-none focus:border-accent/50"
+              />
+              <button onClick={addExcludePattern} className="btn-secondary text-sm py-1.5 px-3">
+                {t('welcome.excludeAdd')}
+              </button>
+            </div>
+            {excludePatterns.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                {excludePatterns.map((pattern) => (
+                  <span
+                    key={pattern}
+                    className="inline-flex items-center gap-1.5 text-xs bg-cream-200 text-ink-soft rounded-full pl-3 pr-2 py-1"
+                  >
+                    {pattern}
+                    <button
+                      onClick={() => removeExcludePattern(pattern)}
+                      className="text-sand-500 hover:text-ink transition-colors"
+                      aria-label={t('welcome.excludeRemove')}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-3 gap-6 text-left">
             <div className="p-4 rounded-xl bg-surface border border-cream-300">

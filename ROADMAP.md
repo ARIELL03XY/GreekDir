@@ -27,4 +27,12 @@
 - ~~Exportación de resultados y reportes.~~ ✅ (CSV/JSON)
 - ~~Desglose por categoría de archivo (porcentaje por tipo).~~ ✅
 - ~~Buscador global.~~ ✅
+- ~~Buscador de duplicados.~~ ✅
+- ~~Sugerencias de limpieza (node_modules, dist, .cache, …).~~ ✅
+- ~~Selección múltiple y borrado en lote.~~ ✅
+- ~~Filtros de exclusión configurables por el usuario.~~ ✅
 - Evaluar soporte para más plataformas.
+- Auto-actualización (electron-updater) — pendiente de publish/release configurado en GitHub.
+- Vista nativa de la papelera de reciclaje (Windows).
+- Comparar dos escaneos (snapshots) y ver qué creció.
+- Modo CLI/headless para automatizar escaneos y reportes.

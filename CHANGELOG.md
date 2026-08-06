@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Duplicate finder**: a "Duplicates" tab groups files by size, hashes the size-groups with the most potential wasted space first (bounded by a hash budget so it stays fast on large drives), and lists them sorted by wasted space, largest first.
+- **Cleanup suggestions**: a "Cleanup" tab surfaces known build-artifact/cache/dependency folders already present in the scan (`node_modules`, `dist`, `.cache`, …), sorted by size.
+- **Multi-select + bulk trash**: checkboxes in the List, Top files, Duplicates, and Cleanup tables, with a floating action bar to move several items to the trash at once (two-step confirm, same as the single-file action).
+- **Keyboard shortcuts**: `Ctrl/Cmd+F` focuses the search box; `Escape` closes the detail panel.
+- **Configurable exclude filters**: add extra folder names to skip during a scan (beyond the built-in system/hidden skip list), persisted across sessions.
 - **Global search**: the toolbar search box now searches the entire scan (files and folders), largest first, with details and context-menu actions on every result.
 - **Category breakdown**: the treemap view shows a stacked bar of the current folder's bytes by file type, with sizes and percentages.
 - **Dark mode**: light/dark toggle in the header, persisted across sessions and following the OS theme on first run.

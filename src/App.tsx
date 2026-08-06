@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { FileNode, ScanProgress } from './types'
 import Header from './components/Header'
 import WelcomeScreen from './components/WelcomeScreen'
@@ -7,12 +7,29 @@ import ResultsView from './components/ResultsView'
 
 type AppState = 'idle' | 'scanning' | 'results'
 
+const EXCLUDE_PATTERNS_STORAGE_KEY = 'greekdir-exclude-patterns'
+
+function getInitialExcludePatterns(): string[] {
+  try {
+    const stored = localStorage.getItem(EXCLUDE_PATTERNS_STORAGE_KEY)
+    const parsed = stored ? JSON.parse(stored) : []
+    return Array.isArray(parsed) ? parsed.filter((p) => typeof p === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 export default function App() {
   const [state, setState] = useState<AppState>('idle')
   const [scanData, setScanData] = useState<FileNode | null>(null)
   const [progress, setProgress] = useState<ScanProgress>({ scanned: 0, currentPath: '' })
   const [selectedPath, setSelectedPath] = useState<string>('')
   const [includeHidden, setIncludeHidden] = useState(false)
+  const [excludePatterns, setExcludePatterns] = useState<string[]>(getInitialExcludePatterns)
+
+  useEffect(() => {
+    localStorage.setItem(EXCLUDE_PATTERNS_STORAGE_KEY, JSON.stringify(excludePatterns))
+  }, [excludePatterns])
 
   const startScan = useCallback(async (dirPath: string) => {
     setSelectedPath(dirPath)
@@ -24,7 +41,7 @@ export default function App() {
     })
 
     try {
-      const result = await window.electronAPI.scanDirectory(dirPath, includeHidden)
+      const result = await window.electronAPI.scanDirectory(dirPath, includeHidden, excludePatterns)
       if (result) {
         setScanData(result)
         setState('results')
@@ -78,6 +95,8 @@ export default function App() {
             onScanPath={handleScanPath}
             includeHidden={includeHidden}
             onIncludeHiddenChange={setIncludeHidden}
+            excludePatterns={excludePatterns}
+            onExcludePatternsChange={setExcludePatterns}
           />
         )}
         {state === 'scanning' && (
@@ -87,6 +106,7 @@ export default function App() {
           <ResultsView
             data={scanData}
             onBackHome={handleReset}
+            includeHidden={includeHidden}
             onRescan={() => startScan(selectedPath)}
           />
         )}

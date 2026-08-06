@@ -1,8 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, shell, type MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
+import crypto from 'node:crypto'
 import { execFileSync, execSync } from 'child_process'
-import type { DiskInfo, FileNode, ScanProgress } from '../src/shared/types'
+import type { DiskInfo, FileNode, ScanProgress, DuplicateGroup, CleanupSuggestion } from '../src/shared/types'
 import { getFileCategory, type CategoryBreakdown } from '../src/shared/categories'
 
 function getDisks(): DiskInfo[] {
@@ -394,14 +395,14 @@ ipcMain.handle('select-directory', async () => {
 
 let scanAbortController: AbortController | null = null
 
-ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = false) => {
+ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = false, excludePatterns: string[] = []) => {
   scanAbortController = new AbortController()
   const signal = scanAbortController.signal
 
   try {
     const result = await scanDir(dirPath, signal, (progress: ScanProgress) => {
       mainWindow?.webContents.send('scan-progress', progress)
-    }, includeHidden)
+    }, includeHidden, undefined, excludePatterns)
     // Cache the full tree so expand-directory can serve subtrees on demand.
     fullScanCache = result
     // Only send the first MAX_IPC_DEPTH levels to the renderer to keep the
@@ -540,6 +541,116 @@ ipcMain.handle('search-files', (_event, query: string, limit = 200) => {
   return matches.slice(0, limit)
 })
 
+/** Streams a file's content through MD5 without loading it fully into memory. */
+function hashFile(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5')
+    const stream = fs.createReadStream(filePath)
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+    stream.on('error', reject)
+  })
+}
+
+/** Files smaller than this are ignored by the duplicate finder — too many, too little payoff. */
+const MIN_DUPLICATE_SIZE = 4096
+/** Upper bound on how many files we'll actually hash per search, so a huge drive can't hang it. */
+const DUPLICATE_HASH_BUDGET = 8000
+
+/**
+ * Finds duplicate files across the whole cached scan. Groups files by size
+ * first (cheap), then hashes only the size-groups with the most potential
+ * wasted space first, up to a hash budget, so this stays fast on drives with
+ * hundreds of thousands of files. Emits `duplicates-progress` as it hashes.
+ */
+ipcMain.handle('find-duplicates', async () => {
+  if (!fullScanCache) return null
+
+  const bySize = new Map<number, FileNode[]>()
+  const stack: FileNode[] = [fullScanCache]
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (node.isDirectory) {
+      if (node.children) stack.push(...node.children)
+    } else if (node.size >= MIN_DUPLICATE_SIZE) {
+      const group = bySize.get(node.size)
+      if (group) group.push(node)
+      else bySize.set(node.size, [node])
+    }
+  }
+
+  const candidateGroups = [...bySize.values()]
+    .filter((files) => files.length > 1)
+    .sort((a, b) => b[0].size * (b.length - 1) - a[0].size * (a.length - 1))
+
+  const results: DuplicateGroup[] = []
+  let hashed = 0
+
+  for (const group of candidateGroups) {
+    if (hashed >= DUPLICATE_HASH_BUDGET) break
+
+    const byHash = new Map<string, FileNode[]>()
+    for (const file of group) {
+      if (hashed >= DUPLICATE_HASH_BUDGET) break
+      try {
+        const hash = await hashFile(file.path)
+        const existing = byHash.get(hash)
+        if (existing) existing.push(file)
+        else byHash.set(hash, [file])
+      } catch {
+        // Unreadable (permissions, locked file, etc.) — skip it.
+      }
+      hashed++
+      if (hashed % 25 === 0) {
+        mainWindow?.webContents.send('duplicates-progress', { hashed })
+      }
+    }
+
+    for (const [hash, files] of byHash) {
+      if (files.length > 1) {
+        results.push({ hash, size: files[0].size, files })
+      }
+    }
+  }
+
+  results.sort((a, b) => b.size * (b.files.length - 1) - a.size * (a.files.length - 1))
+  return results.slice(0, 200)
+})
+
+/** Directory names recognized as safe-to-review cleanup candidates (build artifacts, caches, deps). */
+const JUNK_DIR_NAMES = new Set([
+  'node_modules', 'dist', 'build', 'out', '.next', '.nuxt', '.turbo', '.cache',
+  '__pycache__', '.pytest_cache', '.tox', '.venv', 'venv', '.gradle', 'target',
+  'coverage', '.parcel-cache', '.angular', '.svelte-kit',
+])
+
+/**
+ * Walks the cached scan looking for directories matching JUNK_DIR_NAMES.
+ * Stops descending once a match is found (no point reporting nested matches
+ * inside e.g. node_modules). Only sees what the scan actually walked — most
+ * of these names are skipped by the scan itself unless "include hidden" was on.
+ */
+function collectJunkDirs(root: FileNode): CleanupSuggestion[] {
+  const results: CleanupSuggestion[] = []
+  const stack: FileNode[] = [root]
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (!node.isDirectory) continue
+    if (JUNK_DIR_NAMES.has(node.name)) {
+      results.push({ path: node.path, name: node.name, size: node.size, pattern: node.name })
+      continue
+    }
+    if (node.children) stack.push(...node.children)
+  }
+  results.sort((a, b) => b.size - a.size)
+  return results.slice(0, 100)
+}
+
+ipcMain.handle('get-cleanup-suggestions', () => {
+  if (!fullScanCache) return null
+  return collectJunkDirs(fullScanCache)
+})
+
 ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {
   shell.showItemInFolder(targetPath)
 })
@@ -586,7 +697,8 @@ async function scanDir(
   signal: AbortSignal,
   onProgress: (info: ScanProgress) => void,
   includeHidden = false,
-  counter = { count: 0 }
+  counter = { count: 0 },
+  excludePatterns: string[] = []
 ): Promise<FileNode> {
   if (signal.aborted) throw new DOMException('Scan cancelled', 'AbortError')
 
@@ -619,6 +731,10 @@ async function scanDir(
       if (!includeHidden && (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name))) {
         continue
       }
+      // Skip directories the user explicitly excluded (independent of includeHidden).
+      if (excludePatterns.some((pattern) => pattern.toLowerCase() === entry.name.toLowerCase())) {
+        continue
+      }
       // On macOS, skip mount points that would double-count data (the Data
       // volume is already reachable through firmlinks like /Users) or pull in
       // external drives when scanning from the root. Never optional: these
@@ -626,7 +742,7 @@ async function scanDir(
       if (process.platform === 'darwin' && DARWIN_SKIPPED_PATHS.has(fullPath)) {
         continue
       }
-      const childNode = await scanDir(fullPath, signal, onProgress, includeHidden, counter)
+      const childNode = await scanDir(fullPath, signal, onProgress, includeHidden, counter, excludePatterns)
       node.children!.push(childNode)
       node.size += childNode.size
     } else if (entry.isFile()) {

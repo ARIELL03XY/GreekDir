@@ -26,3 +26,18 @@ export interface ScanProgress {
   scanned: number
   currentPath: string
 }
+
+/** A group of files with identical content (same hash), for the duplicate finder. */
+export interface DuplicateGroup {
+  hash: string
+  size: number
+  files: FileNode[]
+}
+
+/** A directory matching a known "junk" pattern (node_modules, dist, .cache, …). */
+export interface CleanupSuggestion {
+  path: string
+  name: string
+  size: number
+  pattern: string
+}

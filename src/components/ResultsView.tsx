@@ -3,6 +3,8 @@ import { FileNode } from '../types'
 import Treemap from './Treemap'
 import FileList from './FileList'
 import TopFilesList from './TopFilesList'
+import DuplicatesList from './DuplicatesList'
+import CleanupSuggestions from './CleanupSuggestions'
 import DetailPanel from './DetailPanel'
 import ContextMenu, { ContextMenuState } from './ContextMenu'
 import CategoryBar from './CategoryBar'
@@ -14,11 +16,13 @@ interface ResultsViewProps {
   data: FileNode
   onBackHome: () => void
   onRescan: () => void
+  /** Whether the current scan included hidden/system folders (affects cleanup suggestions). */
+  includeHidden: boolean
 }
 
-type ViewMode = 'treemap' | 'list' | 'topfiles'
+type ViewMode = 'treemap' | 'list' | 'topfiles' | 'duplicates' | 'cleanup'
 
-export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewProps) {
+export default function ResultsView({ data, onBackHome, onRescan, includeHidden }: ResultsViewProps) {
   const { t } = useI18n()
   const [viewMode, setViewMode] = useState<ViewMode>('treemap')
   const [currentNode, setCurrentNode] = useState<FileNode>(data)
@@ -35,6 +39,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
   const [debouncedFilter, setDebouncedFilter] = useState('')
   const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
   const breadcrumbsRef = useRef<HTMLElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Debounce the search box so we don't walk the scan tree on every keystroke.
   useEffect(() => {
@@ -66,6 +71,21 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
     const nav = breadcrumbsRef.current
     if (nav) nav.scrollLeft = nav.scrollWidth
   }, [breadcrumbs])
+
+  // Keyboard shortcuts: Ctrl/Cmd+F focuses search, Escape closes the detail panel
+  // (the context menu handles its own Escape and takes priority while open).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        searchInputRef.current?.focus()
+      } else if (event.key === 'Escape' && !contextMenu && selectedFile) {
+        setSelectedFile(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [contextMenu, selectedFile])
 
   const getBreadcrumbLabel = useCallback((node: FileNode) => {
     if (node.name) return node.name
@@ -180,6 +200,7 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
           </div>
           <div className="flex items-center gap-4 shrink-0">
             <input
+              ref={searchInputRef}
               type="text"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
@@ -220,6 +241,26 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
               >
                 {t('results.topFiles')}
               </button>
+              <button
+                onClick={() => setViewMode('duplicates')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'duplicates'
+                    ? 'bg-surface shadow-soft text-ink'
+                    : 'text-sand-500 hover:text-ink-soft'
+                }`}
+              >
+                {t('results.duplicates')}
+              </button>
+              <button
+                onClick={() => setViewMode('cleanup')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'cleanup'
+                    ? 'bg-surface shadow-soft text-ink'
+                    : 'text-sand-500 hover:text-ink-soft'
+                }`}
+              >
+                {t('results.cleanup')}
+              </button>
             </div>
           </div>
         </div>
@@ -250,11 +291,22 @@ export default function ResultsView({ data, onBackHome, onRescan }: ResultsViewP
               onSelect={handleDrillDown}
               onContextMenu={openContextMenu}
             />
-          ) : (
+          ) : viewMode === 'topfiles' ? (
             <TopFilesList
               totalSize={data.size}
               onSelect={setSelectedFile}
               onContextMenu={openContextMenu}
+            />
+          ) : viewMode === 'duplicates' ? (
+            <DuplicatesList
+              onSelect={setSelectedFile}
+              onContextMenu={openContextMenu}
+            />
+          ) : (
+            <CleanupSuggestions
+              onSelect={setSelectedFile}
+              onContextMenu={openContextMenu}
+              includeHidden={includeHidden}
             />
           )}
         </div>
