@@ -53,6 +53,8 @@ export default function App() {
   const handleCancel = useCallback(async () => {
     await window.electronAPI.cancelScan()
     setState('idle')
+    setSelectedPath('')
+    setProgress({ scanned: 0, currentPath: '' })
   }, [])
 
   const handleReset = useCallback(() => {
