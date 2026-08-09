@@ -137,6 +137,36 @@ main.doc code {
 }
 
 @media (max-width: 640px) {
-  .hero h1 { font-size: 2rem; }
+  .container { padding: 0 1.1rem; }
   header.site nav a.doc-link { display: none; }
+  header.site .container { padding-top: 0.7rem; padding-bottom: 0.7rem; }
+  .brand { font-size: 1rem; }
+  .brand .logo-img { width: 28px; height: 28px; }
+
+  .hero { padding: 2.6rem 0 2rem; }
+  .hero-icon { width: 76px; height: 76px; margin-bottom: 1rem; }
+  .hero h1 { font-size: 1.7rem; line-height: 1.25; }
+  .hero p.tagline { font-size: 1rem; margin: 0.7rem auto 1.6rem; }
+  .btn-row { gap: 0.6rem; }
+  .btn { padding: 0.7rem 1.3rem; font-size: 0.88rem; width: 100%; justify-content: center; }
+  .hint { font-size: 0.75rem; }
+
+  .shot { margin-top: 2rem; }
+  .shot img { border-radius: 10px; }
+
+  .features { padding: 2.6rem 0; }
+  .features h2, .downloads h2 { font-size: 1.3rem; margin-bottom: 1.4rem; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 0.7rem; }
+  .card { padding: 1rem; border-radius: 12px; }
+  .card .icon { font-size: 1.2rem; margin-bottom: 0.4rem; }
+  .card h3 { font-size: 0.85rem; }
+  .card p { font-size: 0.78rem; line-height: 1.45; }
+
+  .downloads { padding: 0.5rem 0 2.6rem; }
+
+  footer.site .container { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+}
+
+@media (max-width: 360px) {
+  .grid { grid-template-columns: 1fr; }
 }
