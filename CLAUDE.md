@@ -53,4 +53,4 @@ If you change `MAX_IPC_DEPTH`, the IPC payload size, or the scan-recursion, keep
 `@` resolves to `./src` (configured in both `vite.config.ts` and `tsconfig.json`).
 
 ## Windows release docs
-Release process and store submission live in `docs/` (`windows-v1-scope.md`, `microsoft-store-checklist.md`, `windows-validation.md`, `partner-center-step-by-step.md`) plus `CHANGELOG.md` and `ROADMAP.md`.
+Release-process and store-submission working notes (scope, store checklist, validation runbook, Partner Center steps) are kept locally under `docs/` but are **not tracked in the repo** — they're maintainer-only operational checklists, not public documentation. `CHANGELOG.md` and `ROADMAP.md` are the release-related docs that are tracked here.

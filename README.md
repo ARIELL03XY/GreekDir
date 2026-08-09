@@ -78,8 +78,6 @@ Before running this command, set:
 - `GREEKDIR_PUBLISHER`
 - `GREEKDIR_PUBLISHER_DISPLAY_NAME`
 
-See `/docs/microsoft-store-checklist.md` for the complete publication process.
-
 ## 📁 Project Structure
 
 ```
@@ -120,16 +118,12 @@ The interface follows a minimalist style with:
 - Warm, neutral color palette
 - Earth/copper accent tones
 
-## 📦 Windows release docs
+## 📦 More info
 
-- Scope v1.0: `docs/windows-v1-scope.md`
-- Microsoft Store checklist: `docs/microsoft-store-checklist.md`
-- Windows validation runbook: `docs/windows-validation.md`
-- Partner Center step-by-step: `docs/partner-center-step-by-step.md`
-- Privacy policy: `docs/privacy-policy.md`
-- Support channels: `docs/support.md`
 - Change history: `CHANGELOG.md`
 - Product roadmap: `ROADMAP.md`
+- Privacy policy: https://ariell03xy.github.io/GreekDir/privacy.html
+- Support: https://ariell03xy.github.io/GreekDir/support.html
 
 ## 📄 License
 

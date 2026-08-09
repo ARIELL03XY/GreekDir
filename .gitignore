@@ -5,3 +5,12 @@ dist-electron/
 *.log
 
 release/
+
+# Internal/maintainer-only working docs — kept locally, not published.
+docs/guia-publicacion.md
+docs/microsoft-store-checklist.md
+docs/partner-center-step-by-step.md
+docs/windows-v1-scope.md
+docs/windows-validation.md
+docs/privacy-policy.md
+docs/support.md
