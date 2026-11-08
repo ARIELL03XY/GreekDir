@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Single instance.** Launching GreekDir while it is already open brings the existing window to the front (restoring it if minimised) instead of opening a second copy that would share the same settings files. The installer's "Run once" mode uses its own temporary data folder and is not affected.
 - **CI and releases.** GitHub Actions runs lint, typecheck, tests and a production dependency audit on every push and pull request, and builds the Windows installer. Pushing a `v*` tag builds the installer and creates a **draft** GitHub release with its SHA-256. Dependabot keeps npm packages and the (SHA-pinned) actions up to date.
 - **Run once, without installing**: the Windows installer now opens with a choice between installing GreekDir and running it once. "Run once" unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as `GreekDir-Setup.exe /RUNONCE`. See `build/README.md`.
 
@@ -48,7 +49,7 @@ All notable changes to this project will be documented in this file.
 
 - **Minimum macOS is now 13 (Ventura)**, a consequence of the Electron 45 upgrade (Windows 10 or later is unchanged). The website, its privacy policy and its support page were updated accordingly and now describe the Install / Run once installer, the no-network guarantee and the new safeguards.
 - **Direct distribution only.** The Microsoft Store (APPX) build, its configuration and its scripts were removed. React, D3 and the fonts are bundled by Vite, so the app now ships no runtime dependencies: `app.asar` went from 8.7 MB to 0.6 MB and the installer shrank accordingly.
-- Security updates for build-time dependencies (`npm audit fix`). The remaining advisories (`vite` 5, `vitest` 3) affect development tooling only, never the installer, and need a major-version migration that is tracked separately.
+- Build toolchain upgraded: Vite 5 → 8, `@vitejs/plugin-react` 4 → 6, `vite-plugin-electron` 0.28 → 1.2 and Vitest 3 → 5. This clears every critical and high advisory in the development dependency tree (29 → 11, all moderate). `vite-plugin-electron-renderer` was removed: the sandboxed renderer uses no Node modules. Tailwind 4 and ESLint 10 were deliberately not adopted (large, not security-driven).
 - The `LICENSE` and the website footer now credit `CHV Network Technologies`.
 - The scanner, duplicate finder, cleanup finder and search moved out of `electron/main.ts` into Electron-free modules (`electron/scanner.ts`, `electron/validation.ts`), and `npm test` (Vitest) now covers them. `npm run lint` also covers `electron/`.
 - The publisher and author metadata now read `CHV Network Technologies` (executable, installer, uninstaller entry) and `ARIELL03XY` (package author), and the application ID is `com.chvnetworktechnologies.greekdir`.
