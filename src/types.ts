@@ -22,6 +22,18 @@ export interface ElectronAPI {
   expandDirectory: (path: string) => Promise<FileNode[] | null>
   revealInFolder: (path: string) => Promise<void>
   moveToTrash: (path: string) => Promise<boolean>
+  /** Reports the item selected in the results view; the Clean Up menu acts on it. */
+  setSelection: (path: string | null) => Promise<void>
+  /** Opens with the default app (asks first for programs and scripts). */
+  openItem: (path: string) => Promise<'opened' | 'canceled' | 'failed'>
+  /** Opens a terminal in the folder, or in a file's folder. */
+  openTerminal: (path: string) => Promise<boolean>
+  /** Moves to the trash after a native confirmation dialog. */
+  trashWithConfirmation: (path: string) => Promise<'trashed' | 'canceled' | 'failed'>
+  /** Asks for a destination folder and moves the item there (never overwrites). */
+  moveItem: (path: string) => Promise<'moved' | 'canceled' | 'failed'>
+  /** Items that left the scan through the Clean Up actions (trashed or moved). */
+  onItemsRemoved: (callback: (paths: string[]) => void) => () => void
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   onDuplicatesProgress: (callback: (progress: { hashed: number }) => void) => () => void
   /** Commands from the native menu (e.g. 'select-folder'). Returns an unsubscribe function. */

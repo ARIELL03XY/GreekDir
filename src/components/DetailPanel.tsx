@@ -138,12 +138,20 @@ export default function DetailPanel({ file, totalSize, onClose, onTrashed }: Det
 
         {/* Actions */}
         <div className="space-y-2 pt-2">
-          <button
-            onClick={() => window.electronAPI.revealInFolder(file.path)}
-            className="btn-secondary text-sm w-full py-2"
-          >
-            {t('detail.reveal')}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => void window.electronAPI.openItem(file.path)}
+              className="btn-secondary text-sm flex-1 py-2"
+            >
+              {t('detail.open')}
+            </button>
+            <button
+              onClick={() => window.electronAPI.revealInFolder(file.path)}
+              className="btn-secondary text-sm flex-1 py-2"
+            >
+              {t('detail.reveal')}
+            </button>
+          </div>
           {trashState === 'done' ? (
             <p className="text-xs text-sand-500 bg-cream-100 rounded-lg p-3 text-center">
               {t('detail.trashDone')}

@@ -18,6 +18,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   expandDirectory: (path: string) => ipcRenderer.invoke('expand-directory', path),
   revealInFolder: (path: string) => ipcRenderer.invoke('reveal-in-folder', path),
   moveToTrash: (path: string) => ipcRenderer.invoke('move-to-trash', path),
+  setSelection: (path: string | null) => ipcRenderer.invoke('set-selection', path),
+  openItem: (path: string) => ipcRenderer.invoke('open-item', path),
+  openTerminal: (path: string) => ipcRenderer.invoke('open-terminal', path),
+  trashWithConfirmation: (path: string) => ipcRenderer.invoke('trash-with-confirmation', path),
+  moveItem: (path: string) => ipcRenderer.invoke('move-item', path),
+  onItemsRemoved: (callback: (paths: string[]) => void) => {
+    const handler = (_event: IpcRendererEvent, paths: string[]) => callback(paths)
+    ipcRenderer.on('items-removed', handler)
+    return () => ipcRenderer.removeListener('items-removed', handler)
+  },
   onScanProgress: (callback: (progress: ScanProgress) => void) => {
     const handler = (_event: IpcRendererEvent, progress: ScanProgress) => callback(progress)
     ipcRenderer.on('scan-progress', handler)

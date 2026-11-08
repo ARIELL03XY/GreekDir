@@ -12,6 +12,12 @@ import SearchResults from './SearchResults'
 import { formatSize } from '../utils/format'
 import { useI18n } from '../i18n'
 
+/** Keys typed into a text field, list, checkbox or button belong to that control. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName)
+}
+
 interface ResultsViewProps {
   data: FileNode
   onBackHome: () => void
@@ -76,18 +82,44 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
 
   // Keyboard shortcuts: Ctrl/Cmd+F focuses search, Escape closes the detail panel
   // (the context menu handles its own Escape and takes priority while open).
+  // On Windows/Linux the Clean Up shortcuts are handled here rather than by the native menu, so
+  // Enter and Delete keep working in text fields; macOS registers them in the menu.
   useEffect(() => {
+    const handlesCleanupKeys = window.electronAPI.platform !== 'darwin'
     const onKey = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+      const ctrl = event.ctrlKey || event.metaKey
+      if (ctrl && event.key.toLowerCase() === 'f') {
         event.preventDefault()
         searchInputRef.current?.focus()
-      } else if (event.key === 'Escape' && !contextMenu && selectedFile) {
-        setSelectedFile(null)
+        return
       }
+      if (event.key === 'Escape' && !contextMenu && selectedFile) {
+        setSelectedFile(null)
+        return
+      }
+      if (!handlesCleanupKeys || contextMenu || !selectedFile || event.altKey || isTypingTarget(event.target)) return
+      const api = window.electronAPI
+      const key = event.key.toLowerCase()
+      const action =
+        !ctrl && event.key === 'Enter' ? () => api.openItem(selectedFile.path)
+        : !ctrl && event.key === 'Delete' ? () => api.trashWithConfirmation(selectedFile.path)
+        : ctrl && key === 'e' ? () => api.revealInFolder(selectedFile.path)
+        : ctrl && key === 't' ? () => api.openTerminal(selectedFile.path)
+        : ctrl && key === 'm' ? () => api.moveItem(selectedFile.path)
+        : null
+      if (!action) return
+      event.preventDefault()
+      void action()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [contextMenu, selectedFile])
+
+  // The native Clean Up menu acts on the selected item: keep the main process informed.
+  useEffect(() => {
+    void window.electronAPI.setSelection(selectedFile?.path ?? null).catch(() => {})
+  }, [selectedFile])
+  useEffect(() => () => void window.electronAPI.setSelection(null).catch(() => {}), [])
 
   const getBreadcrumbLabel = useCallback((node: FileNode) => {
     if (node.name) return node.name
@@ -153,6 +185,14 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
   const markTrashed = useCallback((paths: string[]) => {
     setTrashedPaths((prev) => new Set([...prev, ...paths]))
   }, [])
+
+  // Items trashed or moved through the Clean Up menu, keyboard shortcuts or context menu.
+  useEffect(() => {
+    return window.electronAPI.onItemsRemoved((paths) => {
+      markTrashed(paths)
+      setSelectedFile((selected) => (selected && paths.includes(selected.path) ? null : selected))
+    })
+  }, [markTrashed])
 
   // The node passed to child components always carries its effective children, minus anything
   // already moved to the trash (and its size, so totals and percentages stay roughly right).
