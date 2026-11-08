@@ -56,13 +56,30 @@
       "target": [
         {
           "target": "dmg",
-          "arch": "universal"
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",
-      "artifactName": "${productName}-${version}-universal.${ext}",
-      "identity": null
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "minimumSystemVersion": "13.0",
+      "darkModeSupport": true,
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "GreekDir reads file sizes in your Desktop folder to show what is using disk space. Nothing leaves your Mac.",
+        "NSDocumentsFolderUsageDescription": "GreekDir reads file sizes in your Documents folder to show what is using disk space. Nothing leaves your Mac.",
+        "NSDownloadsFolderUsageDescription": "GreekDir reads file sizes in your Downloads folder to show what is using disk space. Nothing leaves your Mac.",
+        "NSRemovableVolumesUsageDescription": "GreekDir reads file sizes on removable drives you choose to scan. Nothing leaves your Mac.",
+        "NSNetworkVolumesUsageDescription": "GreekDir reads file sizes on network drives you choose to scan. Nothing leaves your Mac.",
+        "NSAppleEventsUsageDescription": "GreekDir asks Finder to empty the Trash when you choose Clean Up → Empty Trash."
+      }
+    },
+    "dmg": {
+      "title": "${productName} ${version}"
     },
     "copyright": "Copyright © 2026 CHV Network Technologies",
     "extraMetadata": {

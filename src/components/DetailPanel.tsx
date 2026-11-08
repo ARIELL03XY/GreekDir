@@ -131,9 +131,14 @@ export default function DetailPanel({ file, totalSize, onClose, onTrashed }: Det
 
         {/* Permissions warning */}
         {file.inaccessible && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-950 dark:border-amber-800 rounded-lg p-3">
-            {t('file.noAccess')}
-          </p>
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 dark:text-amber-300 dark:bg-amber-950 dark:border-amber-800 rounded-lg p-3 space-y-2">
+            <p>{t('file.noAccess')}</p>
+            {window.electronAPI.platform === 'darwin' && (
+              <button onClick={() => void window.electronAPI.openPrivacySettings()} className="underline font-medium">
+                {t('mac.fdaOpen')}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Actions */}

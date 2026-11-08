@@ -816,6 +816,12 @@ function findScannedNode(targetPath: unknown): FileNode | null {
   return findNodeByPath(fullScanCache, validPath)
 }
 
+/** macOS: opens System Settings → Privacy & Security → Full Disk Access (a fixed system URL). */
+secureHandle('open-privacy-settings', () => {
+  if (process.platform !== 'darwin') return
+  void shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles')
+})
+
 secureHandle('set-language', (_event, language) => {
   if (language !== 'en' && language !== 'es') throw new Error('Invalid language')
   if (language === menuLanguage) return

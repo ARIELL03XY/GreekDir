@@ -12,6 +12,11 @@ import SearchResults from './SearchResults'
 import { formatSize } from '../utils/format'
 import { useI18n } from '../i18n'
 
+/** True if any folder in the (shallow) scan tree could not be read. */
+function hasInaccessible(node: FileNode): boolean {
+  return !!node.inaccessible || !!node.children?.some(hasInaccessible)
+}
+
 /** Keys typed into a text field, list, checkbox or button belong to that control. */
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -46,6 +51,12 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
   const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
   /** Everything moved to the trash this session. Hidden from every view; sizes refresh on rescan. */
   const [trashedPaths, setTrashedPaths] = useState<Set<string>>(new Set())
+  // macOS hides protected folders (Documents, Desktop, Mail…) until the app has Full Disk Access.
+  const [fdaHintDismissed, setFdaHintDismissed] = useState(false)
+  const showFdaHint = useMemo(
+    () => window.electronAPI.platform === 'darwin' && !fdaHintDismissed && hasInaccessible(data),
+    [data, fdaHintDismissed]
+  )
   const breadcrumbsRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -317,6 +328,21 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
             </div>
           </div>
         </div>
+
+        {showFdaHint && (
+          <div role="status" className="mx-4 mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">🔒 {t('mac.fdaTitle')}</p>
+              <p className="text-xs opacity-90">{t('mac.fdaBody')}</p>
+            </div>
+            <button onClick={() => void window.electronAPI.openPrivacySettings()} className="btn-secondary text-sm py-1.5 px-3 shrink-0">
+              {t('mac.fdaOpen')}
+            </button>
+            <button onClick={() => setFdaHintDismissed(true)} className="text-xs underline shrink-0">
+              {t('bulk.dismiss')}
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden p-4">
           {searchActive ? (

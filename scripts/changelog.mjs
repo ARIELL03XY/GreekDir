@@ -209,7 +209,8 @@ ${body}
 /** The homepage's download button, release link and version label, for the newest released version. */
 export function updateHomepage(html, version) {
   return html
-    .replace(/releases\/download\/v[\w.-]+\/GreekDir-Setup-[\w.-]+\.exe/g, `releases/download/v${version}/GreekDir-Setup-${version}.exe`)
+    // Any download (GreekDir-Setup-1.0.0.exe, GreekDir-1.0.0-arm64.dmg, …): new tag, and the old version in the file name.
+    .replace(/releases\/download\/v([\w.-]+?)\/(GreekDir-[\w.-]+)/g, (_m, old, file) => `releases/download/v${version}/${file.split(old).join(version)}`)
     .replace(/releases\/tag\/v[\w.-]+/g, `releases/tag/v${version}`)
     .replace(/(<span class="release-version">)[^<]*(<\/span>)/g, `$1${version}$2`)
 }
