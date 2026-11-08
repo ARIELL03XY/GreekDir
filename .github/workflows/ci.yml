@@ -31,6 +31,8 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
+      # The website's "What's new" page must match CHANGELOG.md (regenerate with npm run changelog).
+      - run: node scripts/changelog.mjs site --check
       # Only what ships to users: build-time tooling is not part of the installer.
       - run: npm audit --omit=dev --audit-level=high
 

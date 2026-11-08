@@ -124,7 +124,8 @@ footer.site a { color: rgb(var(--muted)); }
 footer.site a:hover { color: rgb(var(--ink)); }
 
 /* Inner pages (privacy / support) */
-main.doc { padding: 3rem 0 4rem; max-width: 720px; margin: 0 auto; }
+/* Only vertical padding: the side gutter comes from .container (a shorthand here used to zero it on phones). */
+main.doc { padding-top: 3rem; padding-bottom: 4rem; max-width: 720px; margin: 0 auto; }
 main.doc h1 { font-size: 1.9rem; margin-bottom: 1.5rem; }
 main.doc h2 { font-size: 1.2rem; margin: 1.8rem 0 0.6rem; }
 main.doc p, main.doc li { color: rgb(var(--ink-soft)); }
@@ -135,6 +136,21 @@ main.doc code {
   font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
   background: rgb(var(--bg-soft)); padding: 0.1em 0.4em; border-radius: 6px;
 }
+
+/* What's new (changelog.html, generated from CHANGELOG.md) */
+main.changelog .lead { color: rgb(var(--muted)); margin-bottom: 0.4rem; }
+main.changelog .release { margin-top: 2.6rem; padding-top: 1.6rem; border-top: 1px solid rgb(var(--border)); }
+main.changelog .release h2 { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin: 0 0 0.8rem; font-size: 1.4rem; }
+main.changelog .release h2 a { color: rgb(var(--ink)); text-decoration: none; }
+main.changelog .release h2 a:hover { color: var(--accent); }
+main.changelog .release h3 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgb(var(--muted)); margin: 1.4rem 0 0.5rem; }
+main.changelog .release li { margin-bottom: 0.45rem; }
+main.changelog .badge {
+  font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 999px; padding: 0.1rem 0.55rem;
+}
+main.changelog time { font-size: 0.85rem; font-weight: 400; color: rgb(var(--muted)); }
 
 @media (max-width: 640px) {
   .container { padding: 0 1.1rem; }
