@@ -12,6 +12,7 @@
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "lint": "eslint src electron --ext .ts,.tsx",
     "patch:builder": "node scripts/patch-electron-builder.cjs",
+    "icons": "electron scripts/build-icons.cjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -41,7 +42,7 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {

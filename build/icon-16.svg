@@ -1,0 +1,10 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hand-tuned 16 px GreekDir icon: whole-pixel blocks, a 1 px rim, fewer blocks than the large icon. -->
+  <rect x="0.5" y="0.5" width="15" height="15" rx="3.5" fill="#F6EADB" stroke="#9A7650"/>
+  <rect x="3" y="3" width="6" height="6" rx="0.75" fill="#B5613A"/>
+  <rect x="10" y="3" width="3" height="3" rx="0.75" fill="#D9854F"/>
+  <rect x="10" y="7" width="3" height="2" rx="0.5" fill="#E3B57A"/>
+  <rect x="3" y="10" width="4" height="3" rx="0.75" fill="#9C8552"/>
+  <rect x="8" y="10" width="2" height="3" rx="0.5" fill="#7E4A2E"/>
+  <rect x="11" y="10" width="2" height="3" rx="0.5" fill="#E39C63"/>
+</svg>

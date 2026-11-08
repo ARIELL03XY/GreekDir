@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, screen, session, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, dialog, Menu, nativeTheme, screen, session, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execFileSync, execSync } from 'child_process'
@@ -15,6 +15,7 @@ import {
   searchTree,
 } from './scanner'
 import { asInt, asPath, asPathOrNull, asQuery, asStringList, isFilesystemRoot } from './validation'
+import { aboutDetail, buildMenuTemplate, menuLabels, menuLanguageFromLocale, type MenuCommand, type MenuLanguage } from './menu'
 
 function getDisks(): DiskInfo[] {
   const platform = process.platform
@@ -264,25 +265,59 @@ function saveWindowState() {
   }
 }
 
+/** Language of the native menu; follows the UI language once the renderer reports it. */
+let menuLanguage: MenuLanguage = 'en'
+
 /**
- * Replaces Electron's default menu. In production the View menu (with its
- * Reload accelerator) is omitted — reloading the renderer would orphan the
- * in-memory scan and drop the results view.
+ * Replaces Electron's default menu (File, Edit, View, Help → About). There is no Reload in
+ * production: reloading the renderer would orphan the in-memory scan and drop the results view.
  */
 function setupMenu() {
-  const isDev = !!process.env.VITE_DEV_SERVER_URL
-  if (process.platform === 'darwin') {
-    const template: MenuItemConstructorOptions[] = [
-      { role: 'appMenu' },
-      { role: 'editMenu' },
-      ...(isDev ? [{ role: 'viewMenu' } as MenuItemConstructorOptions] : []),
-      { role: 'windowMenu' },
-    ]
-    Menu.setApplicationMenu(Menu.buildFromTemplate(template))
-  } else {
-    // Windows/Linux: no menu bar in production (View/reload only in dev).
-    Menu.setApplicationMenu(isDev ? Menu.buildFromTemplate([{ role: 'viewMenu' }]) : null)
+  const template = buildMenuTemplate({
+    platform: process.platform,
+    language: menuLanguage,
+    isDev: !!process.env.VITE_DEV_SERVER_URL,
+    onCommand: sendMenuCommand,
+    onAbout: () => void showAboutDialog(),
+  })
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+function sendMenuCommand(command: MenuCommand) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.focus()
+  mainWindow.webContents.send('menu-command', command)
+}
+
+function aboutInfo() {
+  return {
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+    platform: process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux',
+    arch: process.arch,
   }
+}
+
+/** Windows/Linux About dialog: version, runtime versions and copyright, with a "Copy" button for support. */
+async function showAboutDialog() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const detail = aboutDetail(menuLanguage, aboutInfo())
+  const es = menuLanguage === 'es'
+  const icon = await app.getFileIcon(process.execPath, { size: 'large' }).catch(() => undefined)
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    title: menuLabels(menuLanguage).about,
+    message: 'GreekDir',
+    detail,
+    icon,
+    buttons: ['OK', es ? 'Copiar información' : 'Copy Info'],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+  })
+  if (response === 1) await clipboard.writeText(`GreekDir\n${detail}`)
 }
 
 function createWindow() {
@@ -341,6 +376,14 @@ app.whenReady().then(() => {
   // GreekDir needs no browser permissions (camera, notifications, geolocation, ...): deny them all.
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   session.defaultSession.setPermissionCheckHandler(() => false)
+  menuLanguage = menuLanguageFromLocale(app.getLocale())
+  // macOS: the app menu's "About GreekDir" opens the native About panel with these details.
+  app.setAboutPanelOptions({
+    applicationName: 'GreekDir',
+    applicationVersion: app.getVersion(),
+    version: `Electron ${process.versions.electron}`,
+    copyright: '© 2026 CHV Network Technologies',
+  })
   setupMenu()
   createWindow()
 })
@@ -396,6 +439,13 @@ function findScannedNode(targetPath: unknown): FileNode | null {
   if (!fullScanCache || !validPath) return null
   return findNodeByPath(fullScanCache, validPath)
 }
+
+secureHandle('set-language', (_event, language) => {
+  if (language !== 'en' && language !== 'es') throw new Error('Invalid language')
+  if (language === menuLanguage) return
+  menuLanguage = language
+  setupMenu()
+})
 
 secureHandle('get-drives', async () => {
   return getDisks()

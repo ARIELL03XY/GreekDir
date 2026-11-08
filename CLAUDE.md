@@ -14,16 +14,17 @@ npm run lint         # ESLint over src/ and electron/ (.ts,.tsx)
 npm test             # Vitest unit tests (electron/*.test.ts); npm run test:watch to iterate
 npm run build        # tsc typecheck + vite build + electron-builder (current platform)
 npm run build:win    # Windows NSIS installer -> release/ (see build/README.md before touching it)
+npm run icons        # Re-render build/icon.png, icon.ico, icon.icns from build/icon*.svg (after editing the SVGs)
 ```
 
-Verification gates: `npm run lint`, `npx tsc --noEmit` and `npm test` (CI runs the same). The tests cover the Electron-free logic in `electron/scanner.ts` and `electron/validation.ts`; UI and IPC behaviour have no automated tests. To verify a change actually works at runtime (build + launch Electron + drive it via CDP), use the `verify` skill (`.claude/skills/verify/SKILL.md`).
+Verification gates: `npm run lint`, `npx tsc --noEmit` and `npm test` (CI runs the same). The tests cover the Electron-free logic in `electron/scanner.ts`, `electron/validation.ts` and the menu template in `electron/menu.ts`; UI and IPC behaviour have no automated tests. To verify a change actually works at runtime (build + launch Electron + drive it via CDP), use the `verify` skill (`.claude/skills/verify/SKILL.md`).
 
 ## Architecture
 
 The app has a two-process split; the IPC boundary is the most important thing to understand before changing scanning or data flow.
 
 ### Process boundary
-- **Main process** (`electron/main.ts`, with the Electron-free logic split into `electron/scanner.ts` and `electron/validation.ts`): disk enumeration, window management and all IPC handlers — `get-drives`, `select-directory`, `scan-directory`, `cancel-scan`, `expand-directory`, `get-top-files`, `get-category-breakdown`, `search-files`, `export-report`, `reveal-in-folder`, `move-to-trash`. Runs in Node.
+- **Main process** (`electron/main.ts`, with the Electron-free logic split into `electron/scanner.ts` and `electron/validation.ts`): disk enumeration, window management and all IPC handlers — `get-drives`, `select-directory`, `scan-directory`, `cancel-scan`, `expand-directory`, `get-top-files`, `get-category-breakdown`, `search-files`, `export-report`, `reveal-in-folder`, `move-to-trash`, `set-language` (keeps the native menu, built from `electron/menu.ts`, in the UI language). The menu talks back to the renderer over the `menu-command` event (`onMenuCommand`). Runs in Node.
 - **Preload** (`electron/preload.ts`): the only bridge. Exposes `window.electronAPI` via `contextBridge`. Any new main↔renderer call must be added in three places — `electron/main.ts` (register it with `secureHandle`, **never** bare `ipcMain.handle`: it rejects any sender other than the main window), `electron/preload.ts` (expose method), and `src/types.ts` (`ElectronAPI` interface). The renderer is untrusted: validate every argument with `electron/validation.ts`, and only act on file paths that exist in the current scan (`findScannedNode`).
 - **Renderer** (`src/`): React UI. `App.tsx` is a 3-state machine (`idle` → `scanning` → `results`) that drives which top-level view renders.
 
