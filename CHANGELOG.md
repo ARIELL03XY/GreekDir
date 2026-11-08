@@ -8,6 +8,8 @@ The first public build is versioned **1.0.0-beta.1**; releases tagged with a `-`
 
 ### Added
 
+- **Menu bar.** File (Select Folder…, Ctrl+O; Exit), Edit, View (zoom, full screen) and Help → **About GreekDir**, which shows the app version, the Electron/Chromium/Node.js versions and the copyright, with a button to copy that information for support requests. The menu follows the app's language (English/Spanish). macOS uses its native About panel. There is still no Reload in production builds.
+- **Refined app icon.** The plate has straight sides with continuous-curvature corners, a defined rim, a top highlight and a soft shadow, so its edges stay visible on light and dark backgrounds; the blocks have subtle outlines. Windows gets a real multi-size `.ico` with hand-tuned 16 and 32 px versions. Icons are rendered from the SVG sources with `npm run icons`.
 - **Single instance.** Launching GreekDir while it is already open brings the existing window to the front (restoring it if minimised) instead of opening a second copy that would share the same settings files. The installer's "Run once" mode uses its own temporary data folder and is not affected.
 - **CI and releases.** GitHub Actions runs lint, typecheck, tests and a production dependency audit on every push and pull request, and builds the Windows installer. Pushing a `v*` tag builds the installer and creates a **draft** GitHub release with its SHA-256. Dependabot keeps npm packages and the (SHA-pinned) actions up to date.
 - **Run once, without installing**: the Windows installer now opens with a choice between installing GreekDir and running it once. "Run once" unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as `GreekDir-Setup.exe /RUNONCE`. See `build/README.md`.
@@ -58,6 +60,7 @@ The first public build is versioned **1.0.0-beta.1**; releases tagged with a `-`
 
 ### Fixed
 
+- Exclude patterns changed on the welcome screen were ignored until another setting changed (stale callback).
 - **Bulk move to trash no longer ignores failures.** The result bar now says how many items were really moved and how many were not (in use, no permission, already gone); the ones that failed stay selected so they can be retried, and the right-click menu now shows an error instead of silently closing. Trashed items disappear from every view and from the scan cache.
 - **Duplicates: the last copy is protected.** Selecting every copy of a duplicate group disables "Move to trash" and explains why, so a file can no longer be deleted by accident.
 - **The window can no longer open off-screen** when it was last used on a monitor that is no longer connected: the saved position is ignored (the size is kept) and the window is centred.

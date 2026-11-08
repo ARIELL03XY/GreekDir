@@ -3,6 +3,7 @@ import type { ScanProgress } from '../src/shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
+  setLanguage: (language: string) => ipcRenderer.invoke('set-language', language),
   getDrives: () => ipcRenderer.invoke('get-drives'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   scanDirectory: (path: string, includeHidden?: boolean, excludePatterns?: string[]) =>
@@ -21,6 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const handler = (_event: IpcRendererEvent, progress: ScanProgress) => callback(progress)
     ipcRenderer.on('scan-progress', handler)
     return () => ipcRenderer.removeListener('scan-progress', handler)
+  },
+  onMenuCommand: (callback: (command: string) => void) => {
+    const handler = (_event: IpcRendererEvent, command: string) => callback(command)
+    ipcRenderer.on('menu-command', handler)
+    return () => ipcRenderer.removeListener('menu-command', handler)
   },
   onDuplicatesProgress: (callback: (progress: { hashed: number }) => void) => {
     const handler = (_event: IpcRendererEvent, progress: { hashed: number }) => callback(progress)

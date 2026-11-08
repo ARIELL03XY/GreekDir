@@ -55,13 +55,20 @@ export default function App() {
     } finally {
       unsubscribe()
     }
-  }, [includeHidden])
+  }, [includeHidden, excludePatterns])
 
   const handleSelectDirectory = useCallback(async () => {
     const dirPath = await window.electronAPI.selectDirectory()
     if (!dirPath) return
     startScan(dirPath)
   }, [startScan])
+
+  // File → Select Folder… in the native menu (ignored while a scan is running).
+  useEffect(() => {
+    return window.electronAPI.onMenuCommand((command) => {
+      if (command === 'select-folder' && state !== 'scanning') handleSelectDirectory()
+    })
+  }, [state, handleSelectDirectory])
 
   const handleScanPath = useCallback((path: string) => {
     startScan(path)

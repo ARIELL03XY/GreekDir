@@ -1,0 +1,18 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <!-- Hand-tuned 32 px (also used for 24 px) GreekDir icon: whole-pixel blocks and a 1 px rim. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCF6EE"/>
+      <stop offset="1" stop-color="#ECD8BC"/>
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7" fill="url(#bg)" stroke="#9A7650" stroke-opacity="0.9"/>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="6" fill="none" stroke="#FFFFFF" stroke-opacity="0.6"/>
+  <rect x="4" y="4" width="12" height="12" rx="1.5" fill="#B5613A"/>
+  <rect x="17" y="4" width="11" height="6" rx="1.5" fill="#D9854F"/>
+  <rect x="17" y="11" width="11" height="5" rx="1.5" fill="#E3B57A"/>
+  <rect x="4" y="17" width="8" height="11" rx="1.5" fill="#9C8552"/>
+  <rect x="13" y="17" width="6" height="11" rx="1.5" fill="#7E4A2E"/>
+  <rect x="20" y="17" width="8" height="5" rx="1.5" fill="#E39C63"/>
+  <rect x="20" y="23" width="8" height="5" rx="1.5" fill="#D9B680"/>
+</svg>

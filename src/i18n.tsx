@@ -222,6 +222,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
+    // Keep the native menu in the same language as the UI.
+    window.electronAPI?.setLanguage(language).catch(() => {})
   }, [language])
 
   const value = useMemo<I18nContextValue>(() => ({

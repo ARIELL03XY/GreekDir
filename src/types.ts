@@ -7,6 +7,8 @@ import type { CategoryBreakdown } from './shared/categories'
 export interface ElectronAPI {
   /** Node's process.platform ('darwin', 'win32', 'linux', …). */
   platform: string
+  /** Tells the main process the UI language so the native menu follows it. */
+  setLanguage: (language: 'en' | 'es') => Promise<void>
   getDrives: () => Promise<DiskInfo[]>
   selectDirectory: () => Promise<string | null>
   scanDirectory: (path: string, includeHidden?: boolean, excludePatterns?: string[]) => Promise<FileNode | null>
@@ -22,6 +24,8 @@ export interface ElectronAPI {
   moveToTrash: (path: string) => Promise<boolean>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   onDuplicatesProgress: (callback: (progress: { hashed: number }) => void) => () => void
+  /** Commands from the native menu (e.g. 'select-folder'). Returns an unsubscribe function. */
+  onMenuCommand: (callback: (command: string) => void) => () => void
 }
 
 declare global {
