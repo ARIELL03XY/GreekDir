@@ -1,0 +1,64 @@
+name: Release
+
+# Pushing a tag such as v1.0.0 builds the Windows installer and creates a DRAFT GitHub release with
+# the installer and its SHA-256. Nothing is published until you review the draft and click "Publish".
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build and draft release
+    runs-on: windows-latest
+    permissions:
+      contents: write # create the draft release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: The tag must match package.json
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match package.json version $version"
+          }
+
+      - run: npm test
+      - run: npm run build:win
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release/GreekDir-Setup-*.exe | Select-Object -First 1
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($installer.Name)" | Out-File -Encoding ascii release/SHA256SUMS.txt
+          Get-Content release/SHA256SUMS.txt
+
+      - name: Create draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $notes = @"
+          ## Verify your download
+
+          This build is **not code-signed yet**, so Windows SmartScreen may warn about an unknown publisher.
+          Compare the SHA-256 of the installer with ``SHA256SUMS.txt`` before running it:
+
+          ``Get-FileHash .\GreekDir-Setup-*.exe -Algorithm SHA256``
+
+          The installer lets you install GreekDir or run it once without installing.
+          "@
+          gh release create $env:GITHUB_REF_NAME --draft --verify-tag --title "GreekDir $env:GITHUB_REF_NAME" --notes $notes `
+            (Get-ChildItem release/GreekDir-Setup-*.exe).FullName release/SHA256SUMS.txt
