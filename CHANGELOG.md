@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Run once, without installing**: the Windows installer now opens with a choice between installing GreekDir and running it once. "Run once" unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as `GreekDir-Setup.exe /RUNONCE`. See `build/README.md`.
+
 - **Duplicate finder**: a "Duplicates" tab groups files by size, hashes the size-groups with the most potential wasted space first (bounded by a hash budget so it stays fast on large drives), and lists them sorted by wasted space, largest first.
 - **Cleanup suggestions**: a "Cleanup" tab surfaces known build-artifact/cache/dependency folders already present in the scan (`node_modules`, `dist`, `.cache`, …), sorted by size.
 - **Multi-select + bulk trash**: checkboxes in the List, Top files, Duplicates, and Cleanup tables, with a floating action bar to move several items to the trash at once (two-step confirm, same as the single-file action).
