@@ -6,6 +6,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Large migrations that are not security fixes: do them deliberately in their own change
+      # (Tailwind 4 rewrites the config and CSS entry point; ESLint 10 drops the legacy .eslintrc).
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
     groups:
       # One PR for routine dev-tooling updates; runtime dependencies and Electron get their own PRs.
       dev-tooling:

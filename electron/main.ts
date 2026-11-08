@@ -322,7 +322,22 @@ function createWindow() {
   }
 }
 
+// One instance per user-data directory: a second launch just brings the existing window to the front
+// instead of opening a second one that would fight over the same settings files. (The installer's
+// "Run once" mode starts the app with its own temporary user-data directory, so it is not affected.)
+const isPrimaryInstance = app.requestSingleInstanceLock()
+if (!isPrimaryInstance) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+}
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return
   // GreekDir needs no browser permissions (camera, notifications, geolocation, ...): deny them all.
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   session.defaultSession.setPermissionCheckHandler(() => false)
