@@ -74,6 +74,12 @@
       <p>En macOS, el sistema protege carpetas como Documentos, Escritorio o Mail. Para un escaneo completo, activa <strong>Acceso total al disco</strong> para GreekDir en Ajustes del Sistema → Privacidad y seguridad.</p>
       <h2 style="font-size:1rem">El total escaneado no coincide con el uso del disco</h2>
       <p>Por defecto GreekDir omite carpetas ocultas y de sistema. Marca <em>"Incluir carpetas ocultas y de sistema"</em> en la pantalla de inicio para contarlas.</p>
+      <h2 style="font-size:1rem">Windows muestra «Editor desconocido» o «Windows protegió su PC»</h2>
+      <p>El instalador todavía no está firmado digitalmente. Antes de ejecutarlo, compara su SHA-256 con el publicado junto a la descarga: <code>Get-FileHash .\GreekDir-Setup-*.exe -Algorithm SHA256</code>.</p>
+      <h2 style="font-size:1rem">¿Puedo usar GreekDir sin instalarlo?</h2>
+      <p>Sí. Abre el instalador y elige <strong>«Ejecutar una vez, sin instalar»</strong> (o ejecútalo con <code>GreekDir-Setup.exe /RUNONCE</code>). GreekDir se ejecuta desde una carpeta temporal y todo se borra al cerrarlo; no se crean accesos directos ni se guardan preferencias.</p>
+      <h2 style="font-size:1rem">No se pudieron mover algunos elementos a la papelera</h2>
+      <p>Probablemente estén en uso por otro programa o requieran permisos. Ciérralos y vuelve a intentarlo: los elementos que fallaron quedan seleccionados.</p>
     </div>
 
     <div class="en">
@@ -99,12 +105,18 @@
       <p>On macOS, the system protects folders like Documents, Desktop, or Mail. For a complete scan, enable <strong>Full Disk Access</strong> for GreekDir in System Settings → Privacy &amp; Security.</p>
       <h2 style="font-size:1rem">The scanned total doesn't match disk usage</h2>
       <p>By default GreekDir skips hidden and system folders. Check <em>"Include hidden and system folders"</em> on the start screen to count them.</p>
+      <h2 style="font-size:1rem">Windows shows “Unknown publisher” or “Windows protected your PC”</h2>
+      <p>The installer is not code-signed yet. Before running it, compare its SHA-256 with the one published next to the download: <code>Get-FileHash .\GreekDir-Setup-*.exe -Algorithm SHA256</code>.</p>
+      <h2 style="font-size:1rem">Can I use GreekDir without installing it?</h2>
+      <p>Yes. Open the installer and choose <strong>“Run once, without installing”</strong> (or run <code>GreekDir-Setup.exe /RUNONCE</code>). GreekDir runs from a temporary folder and everything is deleted when you close it; no shortcuts are created and no settings are saved.</p>
+      <h2 style="font-size:1rem">Some items could not be moved to the trash</h2>
+      <p>They are probably in use by another program or need permissions. Close them and try again: the items that failed stay selected.</p>
     </div>
   </main>
 
   <footer class="site">
     <div class="container">
-      <span>© 2026 GreekDir · CHV Network Solutions</span>
+      <span>© 2026 GreekDir · CHV Network Technologies</span>
       <span>
         <a class="es" href="./">Inicio</a><a class="en" href="./">Home</a> ·
         <a class="es" href="privacy.html">Privacidad</a><a class="en" href="privacy.html">Privacy</a> ·

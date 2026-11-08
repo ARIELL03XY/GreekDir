@@ -27,7 +27,7 @@
   },
   "license": "MIT",
   "build": {
-    "appId": "com.chvnetworksolutions.greekdir",
+    "appId": "com.chvnetworktechnologies.greekdir",
     "productName": "GreekDir",
     "files": [
       "dist/**/*",
@@ -62,10 +62,10 @@
       "artifactName": "${productName}-${version}-universal.${ext}",
       "identity": null
     },
-    "copyright": "Copyright © 2026 CHV Network Solutions",
+    "copyright": "Copyright © 2026 CHV Network Technologies",
     "extraMetadata": {
       "author": {
-        "name": "CHV Network Solutions"
+        "name": "CHV Network Technologies"
       }
     },
     "electronFuses": {
