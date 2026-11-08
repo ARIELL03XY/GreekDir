@@ -78,7 +78,8 @@ nav a:hover { color: rgb(var(--ink)); }
 }
 .pill-btn:hover { background: rgb(var(--bg-soft)); }
 
-.hero { text-align: center; padding: 4.5rem 0 3rem; }
+/* Sections only set vertical padding: the side gutter comes from .container. */
+.hero { text-align: center; padding-top: 4.5rem; padding-bottom: 3rem; }
 .hero h1 { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; }
 .hero p.tagline { font-size: 1.2rem; color: rgb(var(--muted)); margin: 0.8rem auto 2rem; max-width: 34rem; }
 
@@ -93,6 +94,9 @@ nav a:hover { color: rgb(var(--ink)); }
 .btn.secondary { background: rgb(var(--bg-soft)); color: rgb(var(--ink-soft)); border: 1px solid rgb(var(--border)); }
 .btn.secondary:hover { background: rgb(var(--border)); }
 .hint { font-size: 0.8rem; color: rgb(var(--muted)); margin-top: 0.8rem; }
+.hint + .hint { margin-top: 0.3rem; }
+.hint a { color: rgb(var(--muted)); }
+.hint a:hover { color: var(--accent); }
 
 .shot { margin: 3rem auto 0; max-width: 880px; }
 .shot img {
@@ -102,7 +106,7 @@ nav a:hover { color: rgb(var(--ink)); }
 }
 html.dark .shot img.light-only, html:not(.dark) .shot img.dark-only { display: none; }
 
-.features { padding: 4rem 0; }
+.features { padding-top: 4rem; padding-bottom: 4rem; }
 .features h2, .downloads h2 { text-align: center; font-size: 1.6rem; margin-bottom: 2rem; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
 .card {
@@ -113,7 +117,7 @@ html.dark .shot img.light-only, html:not(.dark) .shot img.dark-only { display: n
 .card h3 { font-size: 1rem; margin-bottom: 0.3rem; }
 .card p { font-size: 0.9rem; color: rgb(var(--muted)); }
 
-.downloads { padding: 1rem 0 4rem; }
+.downloads { padding-top: 1rem; padding-bottom: 4rem; }
 
 footer.site {
   border-top: 1px solid rgb(var(--border));
@@ -159,7 +163,7 @@ main.changelog time { font-size: 0.85rem; font-weight: 400; color: rgb(var(--mut
   .brand { font-size: 1rem; }
   .brand .logo-img { width: 28px; height: 28px; }
 
-  .hero { padding: 2.6rem 0 2rem; }
+  .hero { padding-top: 2.6rem; padding-bottom: 2rem; }
   .hero-icon { width: 76px; height: 76px; margin-bottom: 1rem; }
   .hero h1 { font-size: 1.7rem; line-height: 1.25; }
   .hero p.tagline { font-size: 1rem; margin: 0.7rem auto 1.6rem; }
@@ -170,7 +174,7 @@ main.changelog time { font-size: 0.85rem; font-weight: 400; color: rgb(var(--mut
   .shot { margin-top: 2rem; }
   .shot img { border-radius: 10px; }
 
-  .features { padding: 2.6rem 0; }
+  .features { padding-top: 2.6rem; padding-bottom: 2.6rem; }
   .features h2, .downloads h2 { font-size: 1.3rem; margin-bottom: 1.4rem; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 0.7rem; }
   .card { padding: 1rem; border-radius: 12px; }
@@ -178,7 +182,7 @@ main.changelog time { font-size: 0.85rem; font-weight: 400; color: rgb(var(--mut
   .card h3 { font-size: 0.85rem; }
   .card p { font-size: 0.78rem; line-height: 1.45; }
 
-  .downloads { padding: 0.5rem 0 2.6rem; }
+  .downloads { padding-top: 0.5rem; padding-bottom: 2.6rem; }
 
   footer.site .container { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
 }

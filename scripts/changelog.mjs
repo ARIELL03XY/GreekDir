@@ -2,8 +2,9 @@
 /**
  * CHANGELOG.md is the single source for release notes:
  *
- *   node scripts/changelog.mjs site           writes docs/changelog.html (the website's "What's new")
- *   node scripts/changelog.mjs site --check   fails if docs/changelog.html is out of date (CI)
+ *   node scripts/changelog.mjs site           writes docs/changelog.html (the website's "What's new") and
+ *                                             points the homepage's download links at the newest release
+ *   node scripts/changelog.mjs site --check   fails if either is out of date (CI)
  *   node scripts/changelog.mjs notes 1.0.0 [file]   prints (or writes to file, UTF-8) that version's
  *                                             section for the GitHub release notes; fails if
  *                                             CHANGELOG.md has no such section
@@ -21,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CHANGELOG = path.join(ROOT, 'CHANGELOG.md')
 const PAGE = path.join(ROOT, 'docs', 'changelog.html')
+const HOME = path.join(ROOT, 'docs', 'index.html')
 const REPO = 'https://github.com/ARIELL03XY/GreekDir'
 
 /** Splits CHANGELOG.md into its version sections (newest first, as written). */
@@ -204,23 +206,36 @@ ${body}
 `
 }
 
+/** The homepage's download button, release link and version label, for the newest released version. */
+export function updateHomepage(html, version) {
+  return html
+    .replace(/releases\/download\/v[\w.-]+\/GreekDir-Setup-[\w.-]+\.exe/g, `releases/download/v${version}/GreekDir-Setup-${version}.exe`)
+    .replace(/releases\/tag\/v[\w.-]+/g, `releases/tag/v${version}`)
+    .replace(/(<span class="release-version">)[^<]*(<\/span>)/g, `$1${version}$2`)
+}
+
 function main(argv) {
   const [command, arg, outFile] = argv
   const versions = parseChangelog(fs.readFileSync(CHANGELOG, 'utf8'))
 
   if (command === 'site') {
     const html = renderPage(versions)
+    const latest = versions.find((v) => v.version.toLowerCase() !== 'unreleased')
+    const homeNow = fs.readFileSync(HOME, 'utf8').replace(/\r\n/g, '\n')
+    const home = latest ? updateHomepage(homeNow, latest.version) : homeNow
     if (arg === '--check') {
       const current = fs.existsSync(PAGE) ? fs.readFileSync(PAGE, 'utf8').replace(/\r\n/g, '\n') : ''
-      if (current !== html) {
-        console.error('docs/changelog.html is out of date: run `npm run changelog` and commit the result.')
+      const stale = [current !== html && 'docs/changelog.html', home !== homeNow && 'the download links in docs/index.html'].filter(Boolean)
+      if (stale.length) {
+        console.error(`Out of date: ${stale.join(' and ')}. Run \`npm run changelog\` and commit the result.`)
         process.exit(1)
       }
-      console.log('docs/changelog.html is up to date.')
+      console.log('docs/changelog.html and the homepage download links are up to date.')
       return
     }
     fs.writeFileSync(PAGE, html)
-    console.log(`Wrote docs/changelog.html (${versions.filter((v) => v.version !== 'Unreleased').length} release(s)).`)
+    if (home !== homeNow) fs.writeFileSync(HOME, home)
+    console.log(`Wrote docs/changelog.html (${versions.filter((v) => v.version !== 'Unreleased').length} release(s)); homepage links point at ${latest?.version ?? 'nothing yet'}.`)
     return
   }
 
