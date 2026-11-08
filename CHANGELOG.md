@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+The first public build is versioned **1.0.0-beta.1**; releases tagged with a `-` suffix are published as pre-releases.
+
 ### Added
 
 - **Single instance.** Launching GreekDir while it is already open brings the existing window to the front (restoring it if minimised) instead of opening a second copy that would share the same settings files. The installer's "Run once" mode uses its own temporary data folder and is not affected.
