@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag such as v1.0.0 (or v1.0.0-beta.1, marked as a pre-release) builds the Windows installer and creates a DRAFT GitHub release with
-# the installer and its SHA-256. Nothing is published until you review the draft and click "Publish".
+# the installer, its SHA-256 and that version's section of CHANGELOG.md as release notes. Nothing is published until you review the
+# draft and click "Publish". The tag must match package.json and CHANGELOG.md must have a "## [version]" section.
 
 on:
   push:
@@ -34,6 +35,14 @@ jobs:
             throw "Tag $env:GITHUB_REF_NAME does not match package.json version $version"
           }
 
+      - name: Release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          # Written by node itself (UTF-8), not through a PowerShell pipe that could re-encode it.
+          node scripts/changelog.mjs notes $env:GITHUB_REF_NAME "$env:RUNNER_TEMP/CHANGES.md"
+          if ($LASTEXITCODE -ne 0) { throw "CHANGELOG.md has no section for $env:GITHUB_REF_NAME" }
+          Get-Content "$env:RUNNER_TEMP/CHANGES.md" -Encoding utf8
+
       - run: npm test
       - run: npm run build:win
 
@@ -50,7 +59,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          $changes = Get-Content "$env:RUNNER_TEMP/CHANGES.md" -Raw -Encoding utf8
           $notes = @"
+          $changes
+
           ## Verify your download
 
           This build is **not code-signed yet**, so Windows SmartScreen may warn about an unknown publisher.

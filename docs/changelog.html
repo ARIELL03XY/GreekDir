@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GreekDir — Novedades / What's new</title>
+  <meta name="description" content="Release notes for every GreekDir version." />
+  <!-- Generated from CHANGELOG.md by scripts/changelog.mjs (npm run changelog). Do not edit by hand. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="site.css?v=4" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <script>
+    (function () {
+      const theme = localStorage.getItem('site-theme')
+        || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+      const lang = localStorage.getItem('site-lang')
+        || (navigator.language.toLowerCase().startsWith('es') ? 'es' : 'en');
+      document.documentElement.lang = lang;
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('lang-' + lang);
+      });
+    })();
+    function toggleTheme() {
+      const dark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('site-theme', dark ? 'dark' : 'light');
+    }
+    function toggleLang() {
+      const next = document.body.classList.contains('lang-es') ? 'en' : 'es';
+      document.body.classList.remove('lang-es', 'lang-en');
+      document.body.classList.add('lang-' + next);
+      document.documentElement.lang = next;
+      localStorage.setItem('site-lang', next);
+    }
+  </script>
+</head>
+<body>
+  <header class="site">
+    <div class="container">
+      <a class="brand" href="./">
+        <img class="logo-img" src="assets/icon.svg" alt="" width="34" height="34" />
+        GreekDir
+      </a>
+      <nav>
+        <a class="doc-link es" href="support.html">Soporte</a>
+        <a class="doc-link en" href="support.html">Support</a>
+        <a class="doc-link" href="https://github.com/ARIELL03XY/GreekDir">GitHub</a>
+        <button class="pill-btn" onclick="toggleLang()" title="Español / English">ES / EN</button>
+        <button class="pill-btn" onclick="toggleTheme()" title="Light / Dark">☀︎ / ☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="doc container changelog">
+    <h1><span class="es">Novedades</span><span class="en">What's new</span></h1>
+    <p class="lead es">Los cambios de cada versión de GreekDir. Las versiones <strong>Beta</strong> son versiones de prueba. Las notas están en inglés.</p>
+    <p class="lead en">What changed in each GreekDir version. <strong>Beta</strong> versions are pre-releases.</p>
+    <p class="lead">
+      <a class="es" href="https://github.com/ARIELL03XY/GreekDir/releases">Descargas en GitHub →</a><a class="en" href="https://github.com/ARIELL03XY/GreekDir/releases">Downloads on GitHub →</a>
+    </p>
+
+      <section class="release" id="v1.0.0-beta.1">
+        <h2>
+          <a href="https://github.com/ARIELL03XY/GreekDir/releases/tag/v1.0.0-beta.1">1.0.0-beta.1</a>
+          <span class="badge">Beta</span>
+          <time datetime="2026-11-08">2026-11-08</time>
+        </h2>
+        <p>The first public build.</p>
+        <h3>Added</h3>
+        <ul>
+          <li><strong>Clean Up menu</strong> (also in the right-click menu, with the same shortcuts): <strong>Open</strong> (Enter; programs and scripts ask before running), <strong>Show in Explorer</strong> (Ctrl+E), <strong>Open Terminal Here</strong> (Ctrl+T), <strong>Move to Recycle Bin</strong> (Delete, with a confirmation), <strong>Move To…</strong> (Ctrl+M; never overwrites, and a move to another drive copies then deletes the original) and <strong>Empty Recycle Bin</strong>, labelled with the number of items and their size. On Windows it also opens Disk Cleanup and Installed Apps. GreekDir still never deletes anything permanently except when you empty the Recycle Bin, and it runs nothing that needs administrator rights.</li>
+          <li><strong>Menu bar.</strong> File (Select Folder…, Ctrl+O; Exit), Edit, View (zoom, full screen) and Help → <strong>About GreekDir</strong>, which shows the app version, the Electron/Chromium/Node.js versions and the copyright, with a button to copy that information for support requests. The menu follows the app's language (English/Spanish). macOS uses its native About panel. There is still no Reload in production builds.</li>
+          <li><strong>Refined app icon.</strong> The plate has straight sides with continuous-curvature corners, a defined rim, a top highlight and a soft shadow, so its edges stay visible on light and dark backgrounds; the blocks have subtle outlines. Windows gets a real multi-size <code>.ico</code> with hand-tuned 16 and 32 px versions. Icons are rendered from the SVG sources with <code>npm run icons</code>.</li>
+          <li><strong>Single instance.</strong> Launching GreekDir while it is already open brings the existing window to the front (restoring it if minimised) instead of opening a second copy that would share the same settings files. The installer's &quot;Run once&quot; mode uses its own temporary data folder and is not affected.</li>
+          <li><strong>CI and releases.</strong> GitHub Actions runs lint, typecheck, tests and a production dependency audit on every push and pull request, and builds the Windows installer. Pushing a <code>v*</code> tag builds the installer and creates a <strong>draft</strong> GitHub release with its SHA-256. Dependabot keeps npm packages and the (SHA-pinned) actions up to date.</li>
+          <li><strong>Run once, without installing</strong>: the Windows installer now opens with a choice between installing GreekDir and running it once. &quot;Run once&quot; unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as <code>GreekDir-Setup.exe /RUNONCE</code>. See <code>build/README.md</code>.</li>
+          <li><strong>Duplicate finder</strong>: a &quot;Duplicates&quot; tab groups files by size, hashes the size-groups with the most potential wasted space first (bounded by a hash budget so it stays fast on large drives), and lists them sorted by wasted space, largest first.</li>
+          <li><strong>Cleanup suggestions</strong>: a &quot;Cleanup&quot; tab surfaces known build-artifact/cache/dependency folders already present in the scan (<code>node_modules</code>, <code>dist</code>, <code>.cache</code>, …), sorted by size.</li>
+          <li><strong>Multi-select + bulk trash</strong>: checkboxes in the List, Top files, Duplicates, and Cleanup tables, with a floating action bar to move several items to the trash at once (two-step confirm, same as the single-file action).</li>
+          <li><strong>Keyboard shortcuts</strong>: <code>Ctrl/Cmd+F</code> focuses the search box; <code>Escape</code> closes the detail panel.</li>
+          <li><strong>Configurable exclude filters</strong>: add extra folder names to skip during a scan (beyond the built-in system/hidden skip list), persisted across sessions.</li>
+          <li><strong>Global search</strong>: the toolbar search box now searches the entire scan (files and folders), largest first, with details and context-menu actions on every result.</li>
+          <li><strong>Category breakdown</strong>: the treemap view shows a stacked bar of the current folder's bytes by file type, with sizes and percentages.</li>
+          <li><strong>Dark mode</strong>: light/dark toggle in the header, persisted across sessions and following the OS theme on first run.</li>
+          <li><strong>Export report</strong>: save the scan as CSV (top 100 files) or JSON (summary + folders + top files) via a native save dialog.</li>
+          <li><strong>Context menu</strong>: right-click any row or treemap tile for Details / Show in folder / Move to trash.</li>
+          <li><strong>Column sorting</strong>: click Name or Size in the list view to reorder.</li>
+          <li><strong>Filter box</strong>: filter the list and top-files views by name or extension.</li>
+          <li><strong>Modified date</strong>: files now carry their last-modified date, shown in the detail panel.</li>
+          <li><strong>Top files view</strong>: ranked list of the 100 largest files across the whole scan, with full path, share of total, and quick actions.</li>
+          <li><strong>File actions</strong>: &quot;Show in folder&quot; (Finder/Explorer) and &quot;Move to trash&quot; (with two-step confirmation) from the detail panel.</li>
+          <li><strong>Rescan button</strong> in the results toolbar to refresh the current folder.</li>
+          <li><strong>Hidden folders toggle</strong>: optionally include hidden/system folders (<code>.git</code>, <code>node_modules</code>, …) in the scan.</li>
+          <li><strong>Language persistence</strong>: the en/es choice is remembered across sessions and defaults to the OS language on first run.</li>
+          <li><strong>Window state persistence</strong>: size and position are restored on relaunch.</li>
+          <li>Custom application menu; production builds drop View/Reload so an accidental Ctrl+R/Cmd+R can no longer lose scan results.</li>
+          <li>Permission-denied folders are now flagged (lock icon + notice) instead of silently reading 0 B.</li>
+          <li>Windows installer build script: <code>build:win</code>.</li>
+          <li>Privacy policy and support pages on the website.</li>
+        </ul>
+        <h3>Security</h3>
+        <ul>
+          <li><strong>Electron 31 → 45</strong> (Chromium 126 → 156). The previous version was out of support and carried dozens of published advisories.</li>
+          <li><strong>No more network access.</strong> Inter and JetBrains Mono are now bundled with the app (SIL OFL-1.1) instead of being loaded from Google Fonts, so GreekDir really never connects to the internet. A full page reload makes only local file requests.</li>
+          <li><strong>Content-Security-Policy</strong> in the packaged app (own files only; no network, plugins or inline scripts), plus an explicit renderer sandbox, no new windows, no navigation away from the app, and all browser permission requests denied.</li>
+          <li><strong>Electron fuses hardened</strong>: <code>ELECTRON_RUN_AS_NODE</code>, <code>NODE_OPTIONS</code> and <code>--inspect</code> are disabled, and the app can only load from an integrity-checked <code>app.asar</code>. The packaged binary can no longer be used as a general-purpose Node interpreter.</li>
+          <li><strong>IPC hardening.</strong> Every main-process handler now rejects calls that do not come from the app's own main window, validates its arguments, and only acts on paths that exist in the current scan. The scan root and filesystem roots can never be trashed, and anything outside the scan (relative paths, <code>..</code> traversal, NUL bytes, wrong types) is refused.</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+          <li><strong>Minimum macOS is now 13 (Ventura)</strong>, a consequence of the Electron 45 upgrade (Windows 10 or later is unchanged). The website, its privacy policy and its support page were updated accordingly and now describe the Install / Run once installer, the no-network guarantee and the new safeguards.</li>
+          <li><strong>Direct distribution only.</strong> The Microsoft Store (APPX) build, its configuration and its scripts were removed. React, D3 and the fonts are bundled by Vite, so the app now ships no runtime dependencies: <code>app.asar</code> went from 8.7 MB to 0.6 MB and the installer shrank accordingly.</li>
+          <li>Build toolchain upgraded: Vite 5 → 8, <code>@vitejs/plugin-react</code> 4 → 6, <code>vite-plugin-electron</code> 0.28 → 1.2 and Vitest 3 → 5. This clears every critical and high advisory in the development dependency tree (29 → 11, all moderate). <code>vite-plugin-electron-renderer</code> was removed: the sandboxed renderer uses no Node modules. Tailwind 4 and ESLint 10 were deliberately not adopted (large, not security-driven).</li>
+          <li>The <code>LICENSE</code> and the website footer now credit <code>CHV Network Technologies</code>.</li>
+          <li>The scanner, duplicate finder, cleanup finder and search moved out of <code>electron/main.ts</code> into Electron-free modules (<code>electron/scanner.ts</code>, <code>electron/validation.ts</code>), and <code>npm test</code> (Vitest) now covers them. <code>npm run lint</code> also covers <code>electron/</code>.</li>
+          <li>The publisher and author metadata now read <code>CHV Network Technologies</code> (executable, installer, uninstaller entry) and <code>ARIELL03XY</code> (package author), and the application ID is <code>com.chvnetworktechnologies.greekdir</code>.</li>
+        </ul>
+        <h3>Fixed</h3>
+        <ul>
+          <li>Exclude patterns changed on the welcome screen were ignored until another setting changed (stale callback).</li>
+          <li><strong>Bulk move to trash no longer ignores failures.</strong> The result bar now says how many items were really moved and how many were not (in use, no permission, already gone); the ones that failed stay selected so they can be retried, and the right-click menu now shows an error instead of silently closing. Trashed items disappear from every view and from the scan cache.</li>
+          <li><strong>Duplicates: the last copy is protected.</strong> Selecting every copy of a duplicate group disables &quot;Move to trash&quot; and explains why, so a file can no longer be deleted by accident.</li>
+          <li><strong>The window can no longer open off-screen</strong> when it was last used on a monitor that is no longer connected: the saved position is ignored (the size is kept) and the window is centred.</li>
+          <li><strong>macOS</strong>: scanning <code>/</code> no longer double-counts data through APFS firmlinks (<code>/System/Volumes/Data</code>) and no longer descends into <code>/Volumes</code> (external drives are scanned individually).</li>
+          <li><strong>macOS</strong>: the disk list hides APFS helper volumes (Preboot, Update, Data, VM) and reports real container usage instead of the sealed system volume's own blocks.</li>
+          <li><strong>macOS</strong>: frameless window is draggable again (missing drag-region CSS) and the traffic lights no longer overlap the header.</li>
+          <li><strong>Windows</strong>: the native window frame is kept (the macOS-only <code>hiddenInset</code> title bar is no longer applied) and <code>System Volume Information</code> is skipped during scans.</li>
+          <li>Treemap drill-down works again for directories above the IPC depth cutoff.</li>
+          <li>Faster deep navigation: <code>expand-directory</code> resolves paths by prefix descent instead of walking the whole tree.</li>
+          <li>Scan errors return the UI to the start screen instead of leaving it stuck on &quot;Scanning…&quot;.</li>
+          <li>Long breadcrumb trails scroll (and auto-scroll to the current folder) instead of overlapping the toolbar.</li>
+        </ul>
+      </section>
+  </main>
+
+  <footer class="site">
+    <div class="container">
+      <span>© 2026 GreekDir · CHV Network Technologies</span>
+      <span>
+        <a class="es" href="./">Inicio</a><a class="en" href="./">Home</a> ·
+        <a class="es" href="privacy.html">Privacidad</a><a class="en" href="privacy.html">Privacy</a> ·
+        <a class="es" href="support.html">Soporte</a><a class="en" href="support.html">Support</a> ·
+        <a href="https://github.com/ARIELL03XY/GreekDir">GitHub</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

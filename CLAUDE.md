@@ -15,6 +15,7 @@ npm test             # Vitest unit tests (electron/*.test.ts); npm run test:watc
 npm run build        # tsc typecheck + vite build + electron-builder (current platform)
 npm run build:win    # Windows NSIS installer -> release/ (see build/README.md before touching it)
 npm run icons        # Re-render build/icon.png, icon.ico, icon.icns from build/icon*.svg (after editing the SVGs)
+npm run changelog    # Regenerate docs/changelog.html ("What's new") and the homepage download links from CHANGELOG.md; CI fails if stale
 ```
 
 Verification gates: `npm run lint`, `npx tsc --noEmit` and `npm test` (CI runs the same). The tests cover the Electron-free logic in `electron/scanner.ts`, `electron/validation.ts`, `electron/fileActions.ts` (move, trash size, executable detection) and the menu template in `electron/menu.ts`; UI and IPC behaviour have no automated tests. To verify a change actually works at runtime (build + launch Electron + drive it via CDP), use the `verify` skill (`.claude/skills/verify/SKILL.md`).
@@ -62,3 +63,10 @@ The installer customisation (Install / Run once, `/RUNONCE`) lives in `build/` a
 
 ## Release docs
 Maintainer-only working notes live in `private-docs/` (git-ignored, never published). `CHANGELOG.md` and `ROADMAP.md` are the release-related docs tracked here.
+
+### Releasing a beta
+Releases are betas for now (`1.0.0-beta.N`, published as GitHub pre-releases). `CHANGELOG.md` is the single source of release notes, in English, and is published on the website. Every user-visible change adds a bullet under `## [Unreleased]`. To cut a release:
+1. Bump `version` in `package.json` (`npm version 1.0.0-beta.N --no-git-tag-version`).
+2. Rename `## [Unreleased]` to `## [1.0.0-beta.N] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
+3. `npm run changelog` (regenerates "What's new" and points the homepage's Windows download button, release link and version label at the new version), then commit and merge to `main` (the site deploys from `docs/`). Merge only after the release is published, or the download button points at a release that does not exist yet.
+4. Tag `v1.0.0-beta.N` on `main` and push the tag. `release.yml` checks the tag against `package.json`, takes that version's section of `CHANGELOG.md` as the release notes (failing if it is missing), builds the installer and creates a **draft** pre-release with `SHA256SUMS.txt`. Publishing the draft is the maintainer's call.
