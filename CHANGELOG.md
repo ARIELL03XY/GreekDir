@@ -4,6 +4,10 @@ All notable changes to GreekDir. Versions with a `-beta.N` suffix are pre-releas
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] - 2026-11-08
+
+The first beta for macOS.
+
 ### Added
 
 - **macOS (beta).** Two DMGs: `arm64` for Apple Silicon (M1 or later) and `x64` for Intel Macs, macOS 13 or later. They are not signed with an Apple Developer ID yet, so the first time macOS says it cannot verify the developer: open **System Settings → Privacy & Security** and click **Open Anyway**.

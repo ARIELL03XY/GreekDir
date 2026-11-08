@@ -1,6 +1,6 @@
 {
   "name": "greekdir",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Desktop disk usage analyzer with a modern Claude-inspired interface",
   "main": "dist-electron/main.js",
   "scripts": {
