@@ -34,6 +34,17 @@ All notable changes to this project will be documented in this file.
 - Windows v1 scope and Microsoft Store publishing checklists in `/docs`.
 - Initial privacy and support documentation templates.
 
+### Security
+
+- **Electron 31 → 45** (Chromium 126 → 156). The previous version was out of support and carried dozens of published advisories.
+- **No more network access.** Inter and JetBrains Mono are now bundled with the app (SIL OFL-1.1) instead of being loaded from Google Fonts, so GreekDir really never connects to the internet. A full page reload makes only local file requests.
+- **Content-Security-Policy** in the packaged app (own files only; no network, plugins or inline scripts), plus an explicit renderer sandbox, no new windows, no navigation away from the app, and all browser permission requests denied.
+- **Electron fuses hardened**: `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` are disabled, and the app can only load from an integrity-checked `app.asar`. The packaged binary can no longer be used as a general-purpose Node interpreter.
+
+### Changed
+
+- The publisher and author metadata now read `CHV Network Solutions` (executable, installer, uninstaller entry) and `ARIELL03XY` (package author), and the application ID is `com.chvnetworksolutions.greekdir`.
+
 ### Fixed
 
 - **macOS**: scanning `/` no longer double-counts data through APFS firmlinks (`/System/Volumes/Data`) and no longer descends into `/Volumes` (external drives are scanned individually).

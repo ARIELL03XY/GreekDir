@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, session, shell, type MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'node:crypto'
@@ -291,10 +291,17 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   })
 
   mainWindow.on('close', saveWindowState)
+
+  // The UI is a single local page: it never opens windows or navigates elsewhere.
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== mainWindow?.webContents.getURL()) event.preventDefault()
+  })
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -305,6 +312,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // GreekDir needs no browser permissions (camera, notifications, geolocation, ...): deny them all.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+  session.defaultSession.setPermissionCheckHandler(() => false)
   setupMenu()
   createWindow()
 })

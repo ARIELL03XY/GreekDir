@@ -21,10 +21,13 @@
     "electron",
     "treemap"
   ],
-  "author": "arieljesuscv23",
+  "author": {
+    "name": "ARIELL03XY",
+    "url": "https://github.com/ARIELL03XY"
+  },
   "license": "MIT",
   "build": {
-    "appId": "com.arieljesuscv23.greekdir",
+    "appId": "com.chvnetworksolutions.greekdir",
     "productName": "GreekDir",
     "files": [
       "dist/**/*",
@@ -58,9 +61,24 @@
       "icon": "build/icon.icns",
       "artifactName": "${productName}-${version}-universal.${ext}",
       "identity": null
+    },
+    "copyright": "Copyright © 2026 CHV Network Solutions",
+    "extraMetadata": {
+      "author": {
+        "name": "CHV Network Solutions"
+      }
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
     }
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "d3": "^7.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -74,7 +92,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "concurrently": "^8.2.2",
-    "electron": "^31.2.0",
+    "electron": "^45.2.3",
     "electron-builder": "26.18.0",
     "eslint": "^8.57.0",
     "postcss": "^8.4.39",
@@ -84,5 +102,9 @@
     "vite-plugin-electron": "^0.28.7",
     "vite-plugin-electron-renderer": "^0.14.5",
     "wait-on": "^7.2.0"
+  },
+  "allowScripts": {
+    "electron@45.2.3": true,
+    "esbuild@0.21.5": true
   }
 }
