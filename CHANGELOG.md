@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **CI and releases.** GitHub Actions runs lint, typecheck, tests and a production dependency audit on every push and pull request, and builds the Windows installer. Pushing a `v*` tag builds the installer and creates a **draft** GitHub release with its SHA-256. Dependabot keeps npm packages and the (SHA-pinned) actions up to date.
 - **Run once, without installing**: the Windows installer now opens with a choice between installing GreekDir and running it once. "Run once" unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as `GreekDir-Setup.exe /RUNONCE`. See `build/README.md`.
 
 - **Duplicate finder**: a "Duplicates" tab groups files by size, hashes the size-groups with the most potential wasted space first (bounded by a hash budget so it stays fast on large drives), and lists them sorted by wasted space, largest first.
@@ -45,6 +46,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **Direct distribution only.** The Microsoft Store (APPX) build, its configuration and its scripts were removed. React, D3 and the fonts are bundled by Vite, so the app now ships no runtime dependencies: `app.asar` went from 8.7 MB to 0.6 MB and the installer shrank accordingly.
+- Security updates for build-time dependencies (`npm audit fix`). The remaining advisories (`vite` 5, `vitest` 3) affect development tooling only, never the installer, and need a major-version migration that is tracked separately.
 - The `LICENSE` and the website footer now credit `CHV Network Solutions`.
 - The scanner, duplicate finder, cleanup finder and search moved out of `electron/main.ts` into Electron-free modules (`electron/scanner.ts`, `electron/validation.ts`), and `npm test` (Vitest) now covers them. `npm run lint` also covers `electron/`.
 - The publisher and author metadata now read `CHV Network Solutions` (executable, installer, uninstaller entry) and `ARIELL03XY` (package author), and the application ID is `com.chvnetworksolutions.greekdir`.

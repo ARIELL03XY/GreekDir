@@ -1,11 +1,11 @@
 # Roadmap
 
-## v1.0 (Windows + Microsoft Store)
+## v1.0 (Windows)
 
 - ~~Finalize the base disk-analysis experience.~~ ✅
 - Smoke test on real Windows hardware.
-- Publish the Windows installer.
-- Complete the Microsoft Store submission.
+- Code-sign the Windows installer (without it SmartScreen shows "Unknown publisher").
+- Publish the installer as a GitHub release (a draft is built automatically when a `v*` tag is pushed).
 
 ## v1.0 (macOS)
 

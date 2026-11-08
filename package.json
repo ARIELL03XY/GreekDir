@@ -8,8 +8,6 @@
     "build": "npm run patch:builder && tsc && vite build && electron-builder --publish never",
     "build:win": "npm run patch:builder && tsc && vite build && electron-builder --win nsis --x64 --publish never",
     "build:mac": "npm run patch:builder && tsc && vite build && electron-builder --mac --publish never",
-    "build:store": "tsc && vite build && electron-builder --win appx --x64 --config electron-builder.store.json --publish never",
-    "release:checklist": "echo \"See /docs/microsoft-store-checklist.md\"",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "lint": "eslint src electron --ext .ts,.tsx",
@@ -78,14 +76,9 @@
       "onlyLoadAppFromAsar": true
     }
   },
-  "dependencies": {
+  "devDependencies": {
     "@fontsource/inter": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
-    "d3": "^7.9.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
     "@types/d3": "^7.4.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -94,10 +87,13 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "concurrently": "^8.2.2",
+    "d3": "^7.9.0",
     "electron": "^45.2.3",
     "electron-builder": "26.18.0",
     "eslint": "^8.57.0",
     "postcss": "^8.4.39",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.3",
     "vite": "^5.3.3",
