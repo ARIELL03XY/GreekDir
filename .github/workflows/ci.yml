@@ -59,3 +59,60 @@ jobs:
           path: release/GreekDir-Setup-*.exe
           retention-days: 7
           if-no-files-found: error
+
+  build-macos:
+    name: Build macOS DMGs
+    needs: check
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Unit tests on macOS too (case-insensitive paths, ~/.Trash, …).
+      - run: npm test
+      - run: npm run build:mac
+        env:
+          # electron-builder skips signing in pull requests (to keep certificates away from forks). Ours is an
+          # ad-hoc signature with no secrets, and without it the bundle ships with a broken signature: sign here
+          # too, so CI checks exactly what a release produces.
+          CSC_FOR_PULL_REQUEST: 'true'
+      - name: Inspect the app bundles
+        run: |
+          set -euo pipefail
+          for app in release/mac-arm64/GreekDir.app release/mac/GreekDir.app; do
+            echo "== $app"
+            lipo -archs "$app/Contents/MacOS/GreekDir"
+            # Ad-hoc signed (no Apple Developer ID yet) and the signature must be intact.
+            codesign -dv "$app" 2>&1 | grep -E "Signature|Identifier|flags"
+            codesign --verify --deep --strict "$app"
+            plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist"
+            plutil -extract NSAppleEventsUsageDescription raw "$app/Contents/Info.plist"
+            npx electron-fuses read --app "$app"
+          done
+          ls -l release/*.dmg
+          shasum -a 256 release/*.dmg
+      - name: Smoke test (Apple Silicon build)
+        run: node scripts/smoke-test.mjs release/mac-arm64/GreekDir.app/Contents/MacOS/GreekDir smoke
+      - name: Screenshot of the whole screen (menu bar included)
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p smoke
+          open -n release/mac-arm64/GreekDir.app --args --user-data-dir="$RUNNER_TEMP/shot-profile"
+          sleep 8
+          screencapture -x smoke/screen.png
+          osascript -e 'quit app "GreekDir"' || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: GreekDir-macOS
+          path: |
+            release/*.dmg
+            smoke/
+          retention-days: 7
+          if-no-files-found: warn

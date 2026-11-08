@@ -4,6 +4,7 @@ import type { ScanProgress } from '../src/shared/types'
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   setLanguage: (language: string) => ipcRenderer.invoke('set-language', language),
+  openPrivacySettings: () => ipcRenderer.invoke('open-privacy-settings'),
   getDrives: () => ipcRenderer.invoke('get-drives'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   scanDirectory: (path: string, includeHidden?: boolean, excludePatterns?: string[]) =>

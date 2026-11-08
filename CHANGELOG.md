@@ -4,6 +4,20 @@ All notable changes to GreekDir. Versions with a `-beta.N` suffix are pre-releas
 
 ## [Unreleased]
 
+## [1.0.0-beta.2] - 2026-11-08
+
+The first beta for macOS.
+
+### Added
+
+- **macOS (beta).** Two DMGs: `arm64` for Apple Silicon (M1 or later) and `x64` for Intel Macs, macOS 13 or later. They are not signed with an Apple Developer ID yet, so the first time macOS says it cannot verify the developer: open **System Settings → Privacy & Security** and click **Open Anyway**.
+- **Full Disk Access hint (macOS).** When a scan finds folders that macOS keeps private (Documents, Desktop, Mail…), GreekDir says so and opens the right settings page; the detail panel of a locked folder has the same button.
+- macOS now explains why GreekDir asks before reading protected folders or removable and network drives, and before asking Finder to empty the Trash (without that explanation macOS silently refused **Empty Trash**).
+
+### Changed
+
+- Every release now includes the Windows installer and both macOS DMGs, with one `SHA256SUMS.txt` for all of them. The macOS builds are checked automatically on a real Mac before each release: signature, architecture, and a launch that lists the disks and scans a folder.
+
 ## [1.0.0-beta.1] - 2026-11-08
 
 The first public build.

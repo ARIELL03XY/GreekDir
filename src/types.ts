@@ -9,6 +9,8 @@ export interface ElectronAPI {
   platform: string
   /** Tells the main process the UI language so the native menu follows it. */
   setLanguage: (language: 'en' | 'es') => Promise<void>
+  /** macOS only: opens the Full Disk Access pane of System Settings. */
+  openPrivacySettings: () => Promise<void>
   getDrives: () => Promise<DiskInfo[]>
   selectDirectory: () => Promise<string | null>
   scanDirectory: (path: string, includeHidden?: boolean, excludePatterns?: string[]) => Promise<FileNode | null>

@@ -78,6 +78,8 @@
       <p>Por defecto GreekDir omite carpetas ocultas y de sistema. Marca <em>"Incluir carpetas ocultas y de sistema"</em> en la pantalla de inicio para contarlas.</p>
       <h2 style="font-size:1rem">Windows muestra «Editor desconocido» o «Windows protegió su PC»</h2>
       <p>El instalador todavía no está firmado digitalmente. Antes de ejecutarlo, compara su SHA-256 con el publicado junto a la descarga: <code>Get-FileHash .\GreekDir-Setup-*.exe -Algorithm SHA256</code>.</p>
+      <h2 style="font-size:1rem">macOS dice que no puede verificar el desarrollador</h2>
+      <p>La versión de Mac todavía no está firmada con una cuenta de Apple Developer. La primera vez que la abras, macOS la bloqueará: ve a <strong>Ajustes del Sistema → Privacidad y seguridad</strong>, baja hasta el aviso sobre GreekDir y pulsa <strong>Abrir igualmente</strong>. Solo hace falta una vez por versión. Descarga el DMG de tu Mac: <code>arm64</code> para Apple Silicon (M1 o posterior) o <code>x64</code> para Intel.</p>
       <h2 style="font-size:1rem">¿Puedo usar GreekDir sin instalarlo?</h2>
       <p>Sí. Abre el instalador y elige <strong>«Ejecutar una vez, sin instalar»</strong> (o ejecútalo con <code>GreekDir-Setup.exe /RUNONCE</code>). GreekDir se ejecuta desde una carpeta temporal y todo se borra al cerrarlo; no se crean accesos directos ni se guardan preferencias.</p>
       <h2 style="font-size:1rem">No se pudieron mover algunos elementos a la papelera</h2>
@@ -109,6 +111,8 @@
       <p>By default GreekDir skips hidden and system folders. Check <em>"Include hidden and system folders"</em> on the start screen to count them.</p>
       <h2 style="font-size:1rem">Windows shows “Unknown publisher” or “Windows protected your PC”</h2>
       <p>The installer is not code-signed yet. Before running it, compare its SHA-256 with the one published next to the download: <code>Get-FileHash .\GreekDir-Setup-*.exe -Algorithm SHA256</code>.</p>
+      <h2 style="font-size:1rem">macOS says it cannot verify the developer</h2>
+      <p>The Mac version is not signed with an Apple Developer account yet. The first time you open it, macOS blocks it: go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down to the message about GreekDir and click <strong>Open Anyway</strong>. You only need to do this once per version. Download the DMG for your Mac: <code>arm64</code> for Apple Silicon (M1 or later) or <code>x64</code> for Intel.</p>
       <h2 style="font-size:1rem">Can I use GreekDir without installing it?</h2>
       <p>Yes. Open the installer and choose <strong>“Run once, without installing”</strong> (or run <code>GreekDir-Setup.exe /RUNONCE</code>). GreekDir runs from a temporary folder and everything is deleted when you close it; no shortcuts are created and no settings are saved.</p>
       <h2 style="font-size:1rem">Some items could not be moved to the trash</h2>

@@ -60,6 +60,25 @@
       <a class="es" href="https://github.com/ARIELL03XY/GreekDir/releases">Descargas en GitHub →</a><a class="en" href="https://github.com/ARIELL03XY/GreekDir/releases">Downloads on GitHub →</a>
     </p>
 
+      <section class="release" id="v1.0.0-beta.2">
+        <h2>
+          <a href="https://github.com/ARIELL03XY/GreekDir/releases/tag/v1.0.0-beta.2">1.0.0-beta.2</a>
+          <span class="badge">Beta</span>
+          <time datetime="2026-11-08">2026-11-08</time>
+        </h2>
+        <p>The first beta for macOS.</p>
+        <h3>Added</h3>
+        <ul>
+          <li><strong>macOS (beta).</strong> Two DMGs: <code>arm64</code> for Apple Silicon (M1 or later) and <code>x64</code> for Intel Macs, macOS 13 or later. They are not signed with an Apple Developer ID yet, so the first time macOS says it cannot verify the developer: open <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>.</li>
+          <li><strong>Full Disk Access hint (macOS).</strong> When a scan finds folders that macOS keeps private (Documents, Desktop, Mail…), GreekDir says so and opens the right settings page; the detail panel of a locked folder has the same button.</li>
+          <li>macOS now explains why GreekDir asks before reading protected folders or removable and network drives, and before asking Finder to empty the Trash (without that explanation macOS silently refused <strong>Empty Trash</strong>).</li>
+        </ul>
+        <h3>Changed</h3>
+        <ul>
+          <li>Every release now includes the Windows installer and both macOS DMGs, with one <code>SHA256SUMS.txt</code> for all of them. The macOS builds are checked automatically on a real Mac before each release: signature, architecture, and a launch that lists the disks and scans a folder.</li>
+        </ul>
+      </section>
+
       <section class="release" id="v1.0.0-beta.1">
         <h2>
           <a href="https://github.com/ARIELL03XY/GreekDir/releases/tag/v1.0.0-beta.1">1.0.0-beta.1</a>
