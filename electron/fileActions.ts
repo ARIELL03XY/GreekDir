@@ -44,12 +44,14 @@ const samePath = (a: string, b: string, platform: NodeJS.Platform) =>
  * Never overwrites: an existing item with the same name is a refusal.
  */
 export function planMove(source: string, targetDir: string, platform: NodeJS.Platform = process.platform): MovePlan {
-  const from = path.resolve(source)
-  const into = path.resolve(targetDir)
-  if (samePath(path.dirname(from), into, platform)) return { ok: false, reason: 'same-folder' }
-  const inside = samePath(into, from, platform) || samePath(into.slice(0, from.length + 1), from + path.sep, platform)
+  // Path rules of the given platform (so Windows paths are handled as such wherever this runs).
+  const p = platform === 'win32' ? path.win32 : path.posix
+  const from = p.resolve(source)
+  const into = p.resolve(targetDir)
+  if (samePath(p.dirname(from), into, platform)) return { ok: false, reason: 'same-folder' }
+  const inside = samePath(into, from, platform) || samePath(into.slice(0, from.length + 1), from + p.sep, platform)
   if (inside) return { ok: false, reason: 'inside-source' }
-  const destination = path.join(into, path.basename(from))
+  const destination = p.join(into, p.basename(from))
   if (fs.existsSync(destination)) return { ok: false, reason: 'exists' }
   return { ok: true, destination }
 }

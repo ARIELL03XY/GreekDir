@@ -75,6 +75,9 @@ describe('planMove', () => {
 
   it('compares paths case-insensitively on Windows and macOS only', () => {
     expect(planMove('C:\\Data\\file.txt', 'c:\\data', 'win32')).toEqual({ ok: false, reason: 'same-folder' })
+    expect(planMove('C:\\Data', 'c:\\data\\Sub', 'win32')).toEqual({ ok: false, reason: 'inside-source' })
+    expect(planMove('/data/file.txt', '/data', 'linux')).toEqual({ ok: false, reason: 'same-folder' })
+    expect(planMove('/Data/file.txt', '/data', 'linux').ok).toBe(true)
   })
 })
 
