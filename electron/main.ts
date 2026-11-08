@@ -1,7 +1,8 @@
 import { app, BrowserWindow, clipboard, ipcMain, dialog, Menu, nativeImage, nativeTheme, screen, session, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { execFileSync, execSync } from 'child_process'
+import { execFile, execFileSync, execSync, spawn } from 'child_process'
+import os from 'os'
 import type { DiskInfo, FileNode, ScanProgress } from '../src/shared/types'
 import { getFileCategory, type CategoryBreakdown } from '../src/shared/categories'
 import {
@@ -15,7 +16,29 @@ import {
   searchTree,
 } from './scanner'
 import { asInt, asPath, asPathOrNull, asQuery, asStringList, isFilesystemRoot } from './validation'
-import { aboutDetail, buildMenuTemplate, menuLabels, menuLanguageFromLocale, type MenuCommand, type MenuLanguage } from './menu'
+import {
+  aboutDetail,
+  buildMenuTemplate,
+  dialogText,
+  menuLabels,
+  menuLanguageFromLocale,
+  type CleanupAction,
+  type DialogKey,
+  type MenuCommand,
+  type MenuLanguage,
+  type SelectionKind,
+  trashSummary,
+} from './menu'
+import {
+  isExecutablePath,
+  measureTrashFolder,
+  measureWindowsRecycleBin,
+  moveItem,
+  planMove,
+  SourceNotRemovedError,
+  type TrashInfo,
+} from './fileActions'
+import { formatSize } from '../src/utils/format'
 
 function getDisks(): DiskInfo[] {
   const platform = process.platform
@@ -279,6 +302,9 @@ function setupMenu() {
     isDev: !!process.env.VITE_DEV_SERVER_URL,
     onCommand: sendMenuCommand,
     onAbout: () => void showAboutDialog(),
+    selection: selectionKind(),
+    trash: trashInfo,
+    onCleanup: runCleanupAction,
   })
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
@@ -323,6 +349,351 @@ async function showAboutDialog() {
   if (response === 1) await clipboard.writeText(`GreekDir\n${detail}`)
 }
 
+// ---------------------------------------------------------------------------
+// Clean Up actions
+//
+// Run from the Clean Up menu (on the item selected in the results view) and from the renderer
+// (keyboard shortcuts, context menu) through the IPC handlers below. Every confirmation is a
+// native dialog shown here, so the untrusted renderer cannot skip it. Only items that are part
+// of the current scan are ever touched.
+// ---------------------------------------------------------------------------
+
+/** Path selected in the results view (validated against the scan). */
+let selectedPath: string | null = null
+/** Recycle Bin / Trash size shown in the Clean Up menu; null while unknown or unreadable. */
+let trashInfo: TrashInfo | null = null
+
+const dt = (key: DialogKey, values?: Record<string, string>) => dialogText(menuLanguage, key, values)
+
+/**
+ * Windows system tools by absolute path: a PATH lookup could find something else first
+ * (Git for Windows ships a GNU `whoami`, for instance) or a planted program.
+ */
+const system32 = (...parts: string[]) => path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', ...parts)
+const WINDOWS_POWERSHELL = () => system32('WindowsPowerShell', 'v1.0', 'powershell.exe')
+const displayName = (node: FileNode) => node.name || node.path
+
+function selectedNode(): FileNode | null {
+  return selectedPath ? findScannedNode(selectedPath) : null
+}
+
+function selectionKind(): SelectionKind {
+  const node = selectedNode()
+  return !node ? 'none' : node.isDirectory ? 'directory' : 'file'
+}
+
+function setSelection(targetPath: string | null) {
+  const node = targetPath ? findScannedNode(targetPath) : null
+  const next = node?.path ?? null
+  if (next === selectedPath) return
+  const hadSelection = selectedPath !== null
+  selectedPath = next
+  // The enabled state of the Clean Up items only changes when a selection appears or goes away.
+  if (hadSelection !== (next !== null)) setupMenu()
+}
+
+function runCleanupAction(action: CleanupAction) {
+  const node = selectedNode()
+  switch (action) {
+    case 'open':
+      if (node) void openItem(node)
+      break
+    case 'reveal':
+      if (node) shell.showItemInFolder(node.path)
+      break
+    case 'terminal':
+      if (node) void openTerminal(node)
+      break
+    case 'trash':
+      if (node) void trashWithConfirmation(node)
+      break
+    case 'move':
+      if (node) void moveWithPicker(node)
+      break
+    case 'empty-trash':
+      void emptyTrash()
+      break
+    case 'disk-cleanup':
+      void launchDetached(system32('cleanmgr.exe'), [])
+      break
+    case 'installed-apps':
+      void shell.openExternal('ms-settings:appsfeatures')
+      break
+  }
+}
+
+async function confirmDialog(options: { title: string; message: string; detail: string; confirm: string }): Promise<boolean> {
+  if (!mainWindow || mainWindow.isDestroyed()) return false
+  const { response } = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: options.title,
+    message: options.message,
+    detail: options.detail,
+    buttons: [options.confirm, dt('cancel')],
+    // Enter and Escape both cancel: these actions run code or delete data.
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  })
+  return response === 0
+}
+
+function showError(message: string) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  void dialog.showMessageBox(mainWindow, { type: 'error', title: 'GreekDir', message, buttons: ['OK'], noLink: true })
+}
+
+/** Tells the renderer that items left the scan (trashed or moved) so every view hides them. */
+function notifyRemoved(paths: string[]) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('items-removed', paths)
+}
+
+/** The scan root and filesystem roots are never trashed or moved. */
+function isProtectedNode(node: FileNode): boolean {
+  return !fullScanCache || node === fullScanCache || isFilesystemRoot(node.path)
+}
+
+/** Opens a file with its default app (a folder in the file manager). Programs and scripts ask first. */
+async function openItem(node: FileNode): Promise<'opened' | 'canceled' | 'failed'> {
+  if (isExecutablePath(node.path)) {
+    const confirmed = await confirmDialog({
+      title: dt('openRunTitle'),
+      message: dt('openRunMessage', { name: displayName(node) }),
+      detail: dt('openRunDetail'),
+      confirm: dt('openRunConfirm'),
+    })
+    if (!confirmed) return 'canceled'
+  }
+  const error = await shell.openPath(node.path)
+  if (!error) return 'opened'
+  showError(dt('openFailed', { name: displayName(node) }))
+  return 'failed'
+}
+
+/** Starts a program in the background, detached from GreekDir. Resolves false if it could not start. */
+function launchDetached(command: string, args: string[], cwd?: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const child = spawn(command, args, { cwd, detached: true, stdio: 'ignore' })
+      child.once('error', () => resolve(false))
+      child.once('spawn', () => {
+        child.unref()
+        resolve(true)
+      })
+    } catch {
+      resolve(false)
+    }
+  })
+}
+
+/**
+ * Opens a terminal in the folder (or in a file's folder). The path is passed as the working
+ * directory or as a single argument, never through a shell.
+ */
+async function openTerminal(node: FileNode): Promise<boolean> {
+  const dir = node.isDirectory ? node.path : path.dirname(node.path)
+  let ok = false
+  if (process.platform === 'win32') {
+    // Windows Terminal when installed (it splits its arguments on ';', so not for such paths),
+    // otherwise PowerShell in its own console window.
+    const wt = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WindowsApps', 'wt.exe') : ''
+    if (wt && fs.existsSync(wt) && !dir.includes(';')) ok = await launchDetached(wt, ['-d', dir])
+    if (!ok) ok = await launchDetached(WINDOWS_POWERSHELL(), ['-NoExit'], dir)
+  } else if (process.platform === 'darwin') {
+    ok = await launchDetached('open', ['-a', 'Terminal', dir])
+  } else {
+    for (const terminal of ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xfce4-terminal', 'xterm']) {
+      ok = await launchDetached(terminal, [], dir)
+      if (ok) break
+    }
+  }
+  if (!ok) showError(dt('terminalFailed', { dir }))
+  return ok
+}
+
+/** Moves a scanned item to the trash and drops it from the cache. */
+async function trashNode(node: FileNode): Promise<boolean> {
+  if (isProtectedNode(node)) return false
+  try {
+    await shell.trashItem(node.path)
+  } catch {
+    return false
+  }
+  removeNode(fullScanCache!, node.path)
+  if (selectedPath === node.path) setSelection(null)
+  scheduleTrashRefresh()
+  return true
+}
+
+/** Delete key / Clean Up menu: asks first (the in-page buttons have their own two-click confirmation). */
+async function trashWithConfirmation(node: FileNode): Promise<'trashed' | 'canceled' | 'failed'> {
+  if (isProtectedNode(node)) return 'failed'
+  const confirmed = await confirmDialog({
+    title: dt('trashTitle'),
+    message: dt('trashMessage', { name: displayName(node), size: formatSize(node.size) }),
+    detail: dt('trashDetail'),
+    confirm: dt('trashConfirm'),
+  })
+  if (!confirmed) return 'canceled'
+  if (!(await trashNode(node))) {
+    showError(dt('trashFailed', { name: displayName(node) }))
+    return 'failed'
+  }
+  notifyRemoved([node.path])
+  return 'trashed'
+}
+
+/** Asks for a folder and moves the item there (never overwriting). */
+async function moveWithPicker(node: FileNode): Promise<'moved' | 'canceled' | 'failed'> {
+  if (isProtectedNode(node) || !mainWindow || mainWindow.isDestroyed()) return 'failed'
+  const name = displayName(node)
+  const picked = await dialog.showOpenDialog(mainWindow, {
+    title: dt('moveTitle', { name }),
+    buttonLabel: dt('moveButton'),
+    defaultPath: path.dirname(node.path),
+    properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+  })
+  if (picked.canceled || picked.filePaths.length === 0) return 'canceled'
+
+  const plan = planMove(node.path, picked.filePaths[0])
+  if (!plan.ok) {
+    const key = plan.reason === 'same-folder' ? 'moveSameFolder' : plan.reason === 'inside-source' ? 'moveInside' : 'moveExists'
+    showError(dt(key, { name }))
+    return 'failed'
+  }
+
+  // A move to another drive is a copy: show progress on the taskbar button meanwhile.
+  mainWindow.setProgressBar(2)
+  try {
+    await moveItem(node.path, plan.destination)
+  } catch (err) {
+    if (err instanceof SourceNotRemovedError) {
+      showError(dt('moveSourceKept', { name, dest: plan.destination }))
+    } else {
+      showError(dt('moveFailed', { name }))
+    }
+    return 'failed'
+  } finally {
+    if (!mainWindow.isDestroyed()) mainWindow.setProgressBar(-1)
+  }
+  removeNode(fullScanCache!, node.path)
+  if (selectedPath === node.path) setSelection(null)
+  notifyRemoved([node.path])
+  return 'moved'
+}
+
+// --- Recycle Bin / Trash ----------------------------------------------------
+
+let windowsUserSid: string | null = null
+
+function getWindowsUserSid(): Promise<string | null> {
+  if (windowsUserSid) return Promise.resolve(windowsUserSid)
+  return new Promise((resolve) => {
+    execFile(system32('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 10_000 }, (err, stdout) => {
+      const sid = err ? null : stdout.match(/S-1-[\d-]+/)?.[0] ?? null
+      windowsUserSid = sid
+      resolve(sid)
+    })
+  })
+}
+
+const xdgTrashFiles = () =>
+  path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'Trash', 'files')
+
+async function measureTrash(): Promise<TrashInfo | null> {
+  if (process.platform === 'win32') {
+    const sid = await getWindowsUserSid()
+    if (!sid) return null
+    // This user's folder in each drive's Recycle Bin (A: and B: are skipped: legacy floppy letters).
+    const dirs = 'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => `${letter}:\\$Recycle.Bin\\${sid}`)
+    return measureWindowsRecycleBin(dirs.filter((dir) => fs.existsSync(dir)))
+  }
+  if (process.platform === 'darwin') return measureTrashFolder(path.join(os.homedir(), '.Trash'))
+  return measureTrashFolder(xdgTrashFiles())
+}
+
+let trashRefreshTimer: NodeJS.Timeout | null = null
+/** The measurement in progress, if any; a request made meanwhile runs once it finishes. */
+let trashRefresh: Promise<void> | null = null
+let trashRefreshAgain = false
+let lastTrashRefresh = 0
+
+/** Re-measures the trash and relabels the Clean Up menu. Coalesces bursts (bulk deletes). */
+function scheduleTrashRefresh(delayMs = 1500) {
+  if (trashRefreshTimer) clearTimeout(trashRefreshTimer)
+  trashRefreshTimer = setTimeout(() => {
+    trashRefreshTimer = null
+    void refreshTrashInfo()
+  }, delayMs)
+}
+
+/** Measures the trash (a large one takes a few seconds) and relabels the menu when it changed. */
+function refreshTrashInfo(): Promise<void> {
+  if (trashRefresh) {
+    trashRefreshAgain = true
+    return trashRefresh
+  }
+  trashRefresh = (async () => {
+    do {
+      trashRefreshAgain = false
+      const info = await measureTrash().catch(() => null)
+      lastTrashRefresh = Date.now()
+      if (info?.items !== trashInfo?.items || info?.size !== trashInfo?.size) {
+        trashInfo = info
+        setupMenu()
+      }
+    } while (trashRefreshAgain)
+  })().finally(() => {
+    trashRefresh = null
+  })
+  return trashRefresh
+}
+
+/** On window focus (the user may have emptied or restored items elsewhere), at most once a minute. */
+function refreshTrashInfoOnFocus() {
+  if (Date.now() - lastTrashRefresh > 60_000) scheduleTrashRefresh(0)
+}
+
+function runQuiet(command: string, args: string[]): Promise<void> {
+  return new Promise((resolve) => {
+    execFile(command, args, { windowsHide: true, timeout: 120_000 }, () => resolve())
+  })
+}
+
+/** Permanently deletes the contents of the Recycle Bin / Trash, after a confirmation. */
+async function emptyTrash() {
+  // Confirm with the last measured size (kept current on focus and after every trash action)
+  // rather than re-measuring first, which takes seconds on a large Recycle Bin.
+  if (trashInfo && trashInfo.items === 0) return
+  const confirmed = await confirmDialog({
+    title: dt('emptyTitle'),
+    message: trashInfo ? dt('emptyMessage', { detail: trashSummary(menuLanguage, trashInfo) }) : dt('emptyMessageUnknown'),
+    detail: dt('emptyDetail'),
+    confirm: dt('emptyConfirm'),
+  })
+  if (!confirmed) return
+
+  if (process.platform === 'win32') {
+    // Clear-RecycleBin reports an error for drives without a Recycle Bin, so success is judged
+    // by measuring again below.
+    await runQuiet(WINDOWS_POWERSHELL(), ['-NoProfile', '-NonInteractive', '-Command', 'Clear-RecycleBin -Force -ErrorAction SilentlyContinue'])
+  } else if (process.platform === 'darwin') {
+    await runQuiet('osascript', ['-e', 'tell application "Finder" to empty trash'])
+  } else {
+    const files = xdgTrashFiles()
+    const info = path.join(path.dirname(files), 'info')
+    for (const dir of [files, info]) {
+      const names = await fs.promises.readdir(dir).catch(() => [] as string[])
+      await Promise.all(names.map((name) => fs.promises.rm(path.join(dir, name), { recursive: true, force: true }).catch(() => {})))
+    }
+  }
+
+  // Wait for any measurement already running, then measure the emptied trash.
+  await trashRefresh
+  await refreshTrashInfo()
+  if (trashInfo && trashInfo.items > 0) showError(dt('emptyFailed'))
+}
+
 function createWindow() {
   const savedState = loadWindowState()
   mainWindow = new BrowserWindow({
@@ -345,6 +716,7 @@ function createWindow() {
   })
 
   mainWindow.on('close', saveWindowState)
+  mainWindow.on('focus', refreshTrashInfoOnFocus)
 
   // The UI is a single local page: it never opens windows or navigates elsewhere.
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -389,6 +761,7 @@ app.whenReady().then(() => {
   })
   setupMenu()
   createWindow()
+  scheduleTrashRefresh(3000)
 })
 
 app.on('window-all-closed', () => {
@@ -471,6 +844,8 @@ secureHandle('scan-directory', async (_event, rawPath, rawIncludeHidden, rawExcl
 
   const stats = await fs.promises.stat(dirPath).catch(() => null)
   if (!stats?.isDirectory()) throw new Error('The scan path is not a directory')
+
+  setSelection(null)
 
   // Only one scan at a time: a new request supersedes any scan still running.
   scanAbortController?.abort()
@@ -602,14 +977,33 @@ secureHandle('reveal-in-folder', (_event, targetPath) => {
  */
 secureHandle('move-to-trash', async (_event, targetPath) => {
   const node = findScannedNode(targetPath)
-  if (!node || !fullScanCache || node === fullScanCache || isFilesystemRoot(node.path)) return false
-  try {
-    await shell.trashItem(node.path)
-  } catch {
-    return false
-  }
-  removeNode(fullScanCache, node.path)
-  return true
+  return node ? trashNode(node) : false
+})
+
+// Clean Up actions requested by the renderer (keyboard shortcuts, context menu). Each one shows
+// its own native confirmation or picker; see the Clean Up actions section above.
+secureHandle('set-selection', (_event, targetPath) => {
+  setSelection(targetPath === null ? null : asPathOrNull(targetPath))
+})
+
+secureHandle('open-item', async (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  return node ? openItem(node) : 'failed'
+})
+
+secureHandle('open-terminal', async (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  return node ? openTerminal(node) : false
+})
+
+secureHandle('trash-with-confirmation', async (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  return node ? trashWithConfirmation(node) : 'failed'
+})
+
+secureHandle('move-item', async (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  return node ? moveWithPicker(node) : 'failed'
 })
 
 secureHandle('cancel-scan', () => {
