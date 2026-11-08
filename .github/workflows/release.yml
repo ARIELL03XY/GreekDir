@@ -1,6 +1,6 @@
 name: Release
 
-# Pushing a tag such as v1.0.0 builds the Windows installer and creates a DRAFT GitHub release with
+# Pushing a tag such as v1.0.0 (or v1.0.0-beta.1, marked as a pre-release) builds the Windows installer and creates a DRAFT GitHub release with
 # the installer and its SHA-256. Nothing is published until you review the draft and click "Publish".
 
 on:
@@ -60,5 +60,8 @@ jobs:
 
           The installer lets you install GreekDir or run it once without installing.
           "@
-          gh release create $env:GITHUB_REF_NAME --draft --verify-tag --title "GreekDir $env:GITHUB_REF_NAME" --notes $notes `
+          # A tag like v1.0.0-beta.1 is marked as a pre-release.
+          $flags = @()
+          if ($env:GITHUB_REF_NAME -match '-') { $flags += '--prerelease' }
+          gh release create $env:GITHUB_REF_NAME --draft @flags --verify-tag --title "GreekDir $env:GITHUB_REF_NAME" --notes $notes `
             (Get-ChildItem release/GreekDir-Setup-*.exe).FullName release/SHA256SUMS.txt
