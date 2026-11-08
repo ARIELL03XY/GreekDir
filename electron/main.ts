@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, ipcMain, dialog, Menu, nativeTheme, screen, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, dialog, Menu, nativeImage, nativeTheme, screen, session, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { execFileSync, execSync } from 'child_process'
@@ -306,7 +306,10 @@ async function showAboutDialog() {
   if (!mainWindow || mainWindow.isDestroyed()) return
   const detail = aboutDetail(menuLanguage, aboutInfo())
   const es = menuLanguage === 'es'
-  const icon = await app.getFileIcon(process.execPath, { size: 'large' }).catch(() => undefined)
+  // The app's own icon (public/icon.png, copied into dist/ by Vite). app.getFileIcon() on the exe returns
+  // Windows' generic program icon, and in development there is no GreekDir exe at all.
+  const iconPath = path.join(__dirname, '../dist/icon.png')
+  const icon = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath).resize({ width: 128, height: 128, quality: 'best' }) : undefined
   const { response } = await dialog.showMessageBox(mainWindow, {
     title: menuLabels(menuLanguage).about,
     message: 'GreekDir',

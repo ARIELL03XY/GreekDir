@@ -4,6 +4,7 @@
  *   build/icon.ico   Windows: 16–256 px; 16 px from icon-16.svg, 20–32 px from icon-32.svg,
  *                    larger sizes from icon.svg cropped so the plate fills more of the square
  *   build/icon.icns  macOS: 16–1024 px from icon.svg
+ *   public/icon.png  256 px, shipped with the app (About dialog, page favicon)
  *
  * Uses Electron's own Chromium as the SVG renderer, so no extra dependencies:
  *   npm run icons      (= electron scripts/build-icons.cjs)
@@ -125,6 +126,9 @@ app.whenReady().then(async () => {
     const macPngs = await renderAll(win, MAC.map(([, size]) => ({ size, svg: sized(large, size) })))
     fs.writeFileSync(path.join(BUILD, 'icon.icns'), buildIcns(MAC.map(([type], i) => ({ type, png: macPngs[i] }))))
     fs.writeFileSync(path.join(BUILD, 'icon.png'), macPngs[MAC.length - 1])
+    const [appIcon] = await renderAll(win, [{ size: 256, svg: sized(large, 256) }])
+    fs.mkdirSync(path.join(BUILD, '..', 'public'), { recursive: true })
+    fs.writeFileSync(path.join(BUILD, '..', 'public', 'icon.png'), appIcon)
 
     // Previews of every Windows size, for checking the small icons by eye.
     const previewDir = process.env.ICON_PREVIEW_DIR
@@ -132,7 +136,7 @@ app.whenReady().then(async () => {
       fs.mkdirSync(previewDir, { recursive: true })
       WINDOWS.forEach((j, i) => fs.writeFileSync(path.join(previewDir, `win-${j.size}.png`), winPngs[i]))
     }
-    console.log('Wrote build/icon.png, build/icon.ico, build/icon.icns')
+    console.log('Wrote build/icon.png, build/icon.ico, build/icon.icns, public/icon.png')
   } catch (err) {
     console.error(err)
     process.exitCode = 1
