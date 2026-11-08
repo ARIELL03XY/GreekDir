@@ -41,12 +41,19 @@ All notable changes to this project will be documented in this file.
 - **Content-Security-Policy** in the packaged app (own files only; no network, plugins or inline scripts), plus an explicit renderer sandbox, no new windows, no navigation away from the app, and all browser permission requests denied.
 - **Electron fuses hardened**: `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` are disabled, and the app can only load from an integrity-checked `app.asar`. The packaged binary can no longer be used as a general-purpose Node interpreter.
 
+- **IPC hardening.** Every main-process handler now rejects calls that do not come from the app's own main window, validates its arguments, and only acts on paths that exist in the current scan. The scan root and filesystem roots can never be trashed, and anything outside the scan (relative paths, `..` traversal, NUL bytes, wrong types) is refused.
+
 ### Changed
 
+- The `LICENSE` and the website footer now credit `CHV Network Solutions`.
+- The scanner, duplicate finder, cleanup finder and search moved out of `electron/main.ts` into Electron-free modules (`electron/scanner.ts`, `electron/validation.ts`), and `npm test` (Vitest) now covers them. `npm run lint` also covers `electron/`.
 - The publisher and author metadata now read `CHV Network Solutions` (executable, installer, uninstaller entry) and `ARIELL03XY` (package author), and the application ID is `com.chvnetworksolutions.greekdir`.
 
 ### Fixed
 
+- **Bulk move to trash no longer ignores failures.** The result bar now says how many items were really moved and how many were not (in use, no permission, already gone); the ones that failed stay selected so they can be retried, and the right-click menu now shows an error instead of silently closing. Trashed items disappear from every view and from the scan cache.
+- **Duplicates: the last copy is protected.** Selecting every copy of a duplicate group disables "Move to trash" and explains why, so a file can no longer be deleted by accident.
+- **The window can no longer open off-screen** when it was last used on a monitor that is no longer connected: the saved position is ignored (the size is kept) and the window is centred.
 - **macOS**: scanning `/` no longer double-counts data through APFS firmlinks (`/System/Volumes/Data`) and no longer descends into `/Volumes` (external drives are scanned individually).
 - **macOS**: the disk list hides APFS helper volumes (Preboot, Update, Data, VM) and reports real container usage instead of the sealed system volume's own blocks.
 - **macOS**: frameless window is draggable again (missing drag-region CSS) and the traffic lights no longer overlap the header.

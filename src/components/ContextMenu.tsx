@@ -12,18 +12,22 @@ interface ContextMenuProps {
   menu: ContextMenuState
   onShowDetails: (node: FileNode) => void
   onClose: () => void
+  /** Called with the path once it was really moved to the trash. */
+  onTrashed: (paths: string[]) => void
 }
 
 /**
  * Right-click menu with quick file actions. Rendered inside a full-screen
  * overlay that closes it on any outside click or Escape.
  */
-export default function ContextMenu({ menu, onShowDetails, onClose }: ContextMenuProps) {
+export default function ContextMenu({ menu, onShowDetails, onClose, onTrashed }: ContextMenuProps) {
   const { t } = useI18n()
   const [confirmingTrash, setConfirmingTrash] = useState(false)
+  const [trashFailed, setTrashFailed] = useState(false)
 
   useEffect(() => {
     setConfirmingTrash(false)
+    setTrashFailed(false)
   }, [menu])
 
   useEffect(() => {
@@ -39,8 +43,15 @@ export default function ContextMenu({ menu, onShowDetails, onClose }: ContextMen
       setConfirmingTrash(true)
       return
     }
-    await window.electronAPI.moveToTrash(menu.node.path)
-    onClose()
+    const ok = await window.electronAPI.moveToTrash(menu.node.path).catch(() => false)
+    if (ok) {
+      onTrashed([menu.node.path])
+      onClose()
+    } else {
+      // Keep the menu open and say so: the item is still there.
+      setConfirmingTrash(false)
+      setTrashFailed(true)
+    }
   }
 
   // Keep the menu inside the viewport when opened near the edges.
@@ -81,6 +92,11 @@ export default function ContextMenu({ menu, onShowDetails, onClose }: ContextMen
         >
           {confirmingTrash ? t('detail.trashConfirm') : t('detail.trash')}
         </button>
+        {trashFailed && (
+          <p role="alert" className="px-4 pt-1 pb-1.5 text-xs text-red-600 dark:text-red-400">
+            {t('detail.trashError')}
+          </p>
+        )}
       </div>
     </div>
   )

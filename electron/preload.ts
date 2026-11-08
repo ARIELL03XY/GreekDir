@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import type { FileNode, ScanProgress } from '../src/shared/types'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { ScanProgress } from '../src/shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
@@ -18,12 +18,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   revealInFolder: (path: string) => ipcRenderer.invoke('reveal-in-folder', path),
   moveToTrash: (path: string) => ipcRenderer.invoke('move-to-trash', path),
   onScanProgress: (callback: (progress: ScanProgress) => void) => {
-    const handler = (_event: any, progress: ScanProgress) => callback(progress)
+    const handler = (_event: IpcRendererEvent, progress: ScanProgress) => callback(progress)
     ipcRenderer.on('scan-progress', handler)
     return () => ipcRenderer.removeListener('scan-progress', handler)
   },
   onDuplicatesProgress: (callback: (progress: { hashed: number }) => void) => {
-    const handler = (_event: any, progress: { hashed: number }) => callback(progress)
+    const handler = (_event: IpcRendererEvent, progress: { hashed: number }) => callback(progress)
     ipcRenderer.on('duplicates-progress', handler)
     return () => ipcRenderer.removeListener('duplicates-progress', handler)
   },

@@ -1,10 +1,20 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, session, shell, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, nativeTheme, screen, session, shell, type MenuItemConstructorOptions } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import crypto from 'node:crypto'
 import { execFileSync, execSync } from 'child_process'
-import type { DiskInfo, FileNode, ScanProgress, DuplicateGroup, CleanupSuggestion } from '../src/shared/types'
+import type { DiskInfo, FileNode, ScanProgress } from '../src/shared/types'
 import { getFileCategory, type CategoryBreakdown } from '../src/shared/categories'
+import {
+  buildShallowTree,
+  collectJunkDirs,
+  collectTopFiles,
+  findDuplicateGroups,
+  findNodeByPath,
+  removeNode,
+  scanDir,
+  searchTree,
+} from './scanner'
+import { asInt, asPath, asPathOrNull, asQuery, asStringList, isFilesystemRoot } from './validation'
 
 function getDisks(): DiskInfo[] {
   const platform = process.platform
@@ -128,22 +138,6 @@ function getWindowsDriveLetterFallback(): DiskInfo[] {
   return drives
 }
 
-function getDisplayNameForPath(dirPath: string): string {
-  const parsedRoot = path.parse(dirPath).root
-  const normalizedPath = dirPath.replace(/[\\/]+$/, '')
-  const normalizedRoot = parsedRoot.replace(/[\\/]+$/, '')
-
-  if (
-    dirPath === parsedRoot ||
-    normalizedPath === normalizedRoot ||
-    normalizedPath.length === 0
-  ) {
-    return parsedRoot || dirPath
-  }
-
-  return path.basename(normalizedPath) || dirPath
-}
-
 function getMacDisks(): DiskInfo[] {
   try {
     const output = execSync('df -k', { encoding: 'utf8' })
@@ -237,11 +231,28 @@ const windowStateFile = () => path.join(app.getPath('userData'), 'window-state.j
 function loadWindowState(): Partial<Electron.Rectangle> {
   try {
     const state = JSON.parse(fs.readFileSync(windowStateFile(), 'utf8'))
-    if (typeof state.width === 'number' && typeof state.height === 'number') return state
+    if (typeof state.width === 'number' && typeof state.height === 'number') {
+      const size = { width: state.width, height: state.height }
+      // A saved position may belong to a monitor that is no longer connected; in that case
+      // keep the size and let the OS place the window instead of opening it off-screen.
+      return isPositionOnScreen(state) ? { ...size, x: state.x, y: state.y } : size
+    }
   } catch {
     // First run or corrupt file — use defaults.
   }
   return {}
+}
+
+/** True if enough of the window (and its title bar) would be visible on some connected display. */
+function isPositionOnScreen(bounds: Partial<Electron.Rectangle>): boolean {
+  const { x, y, width, height } = bounds
+  if (![x, y, width, height].every((v) => typeof v === 'number' && Number.isFinite(v))) return false
+  const MIN_VISIBLE = 100
+  return screen.getAllDisplays().some(({ workArea }) => {
+    const overlapX = Math.min(x! + width!, workArea.x + workArea.width) - Math.max(x!, workArea.x)
+    const titleBarVisible = y! >= workArea.y - 10 && y! <= workArea.y + workArea.height - MIN_VISIBLE
+    return overlapX >= MIN_VISIBLE && titleBarVisible
+  })
 }
 
 function saveWindowState() {
@@ -327,7 +338,36 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
 })
 
-// IPC Handlers
+// ---------------------------------------------------------------------------
+// IPC
+//
+// Every handler is registered through secureHandle(): only the app's own main
+// window (its top-level frame) may call it, and every argument is validated
+// because the renderer is treated as untrusted. File operations only accept
+// paths that exist in the current scan.
+// ---------------------------------------------------------------------------
+
+type IpcListener = Parameters<typeof ipcMain.handle>[1]
+
+/** Only the main window's top-level frame is allowed to talk to the main process. */
+function isTrustedSender(event: Electron.IpcMainInvokeEvent): boolean {
+  return (
+    mainWindow !== null &&
+    !mainWindow.isDestroyed() &&
+    event.sender === mainWindow.webContents &&
+    event.senderFrame != null &&
+    event.senderFrame.parent === null
+  )
+}
+
+function secureHandle(channel: string, listener: IpcListener) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!isTrustedSender(event)) {
+      throw new Error(`Rejected IPC call to "${channel}" from an untrusted sender`)
+    }
+    return listener(event, ...args)
+  })
+}
 
 /** Maximum depth of the tree included in the initial scan-directory IPC response. */
 const MAX_IPC_DEPTH = 3
@@ -335,67 +375,18 @@ const MAX_IPC_DEPTH = 3
 /** In-memory cache of the last full scan result used for lazy expand-directory requests. */
 let fullScanCache: FileNode | null = null
 
-/**
- * Returns a copy of `node` that only includes children up to `maxDepth` levels
- * below the current depth. Directories that are cut off keep their `size` and
- * receive a `childCount` field so the renderer knows they can be expanded.
- */
-function buildShallowTree(node: FileNode, currentDepth: number, maxDepth: number): FileNode {
-  if (!node.isDirectory || !node.children) {
-    return node
-  }
-
-  if (currentDepth >= maxDepth) {
-    // Omit children but record how many there are so the renderer can lazy-load.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { children, ...rest } = node
-    return { ...rest, childCount: node.children.length }
-  }
-
-  return {
-    ...node,
-    children: node.children.map((child) => buildShallowTree(child, currentDepth + 1, maxDepth)),
-  }
+/** The node for `targetPath`, only if it is part of the current scan. */
+function findScannedNode(targetPath: unknown): FileNode | null {
+  const validPath = asPathOrNull(targetPath)
+  if (!fullScanCache || !validPath) return null
+  return findNodeByPath(fullScanCache, validPath)
 }
 
-/**
- * Finds the node in `root` whose `path` matches `targetPath`.
- * Child paths are built with path.join(parent, name), so we can descend the
- * tree following path prefixes instead of walking every node — O(depth ×
- * siblings) rather than O(total nodes), which matters on multi-million-file
- * scans. Falls back to a full search if the prefix descent dead-ends.
- */
-function findNodeByPath(root: FileNode, targetPath: string): FileNode | null {
-  let node: FileNode | null = root
-  while (node) {
-    if (node.path === targetPath) return node
-    const parent: FileNode = node
-    node =
-      parent.children?.find(
-        (c) =>
-          c.path === targetPath ||
-          (targetPath.startsWith(c.path) &&
-            (c.path.endsWith(path.sep) || targetPath[c.path.length] === path.sep))
-      ) ?? null
-  }
-  return findNodeByPathSlow(root, targetPath)
-}
-
-function findNodeByPathSlow(root: FileNode, targetPath: string): FileNode | null {
-  if (root.path === targetPath) return root
-  if (!root.children) return null
-  for (const child of root.children) {
-    const found = findNodeByPathSlow(child, targetPath)
-    if (found) return found
-  }
-  return null
-}
-
-ipcMain.handle('get-drives', async () => {
+secureHandle('get-drives', async () => {
   return getDisks()
 })
 
-ipcMain.handle('select-directory', async () => {
+secureHandle('select-directory', async () => {
   const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ['openDirectory'],
   })
@@ -405,7 +396,16 @@ ipcMain.handle('select-directory', async () => {
 
 let scanAbortController: AbortController | null = null
 
-ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = false, excludePatterns: string[] = []) => {
+secureHandle('scan-directory', async (_event, rawPath, rawIncludeHidden, rawExcludePatterns) => {
+  const dirPath = path.normalize(asPath(rawPath, 'scan path'))
+  const includeHidden = rawIncludeHidden === true
+  const excludePatterns = asStringList(rawExcludePatterns)
+
+  const stats = await fs.promises.stat(dirPath).catch(() => null)
+  if (!stats?.isDirectory()) throw new Error('The scan path is not a directory')
+
+  // Only one scan at a time: a new request supersedes any scan still running.
+  scanAbortController?.abort()
   scanAbortController = new AbortController()
   const signal = scanAbortController.signal
 
@@ -418,34 +418,15 @@ ipcMain.handle('scan-directory', async (event, dirPath: string, includeHidden = 
     // Only send the first MAX_IPC_DEPTH levels to the renderer to keep the
     // initial IPC payload small and avoid freezing the renderer.
     return result ? buildShallowTree(result, 0, MAX_IPC_DEPTH) : null
-  } catch (err: any) {
-    if (err.name === 'AbortError') return null
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') return null
     throw err
   }
 })
 
-/**
- * Returns the `count` largest files of the whole cached scan, size-descending.
- * Walks iteratively — the tree can hold millions of nodes.
- */
-function collectTopFiles(root: FileNode, count: number): FileNode[] {
-  const files: FileNode[] = []
-  const stack: FileNode[] = [root]
-  while (stack.length > 0) {
-    const node = stack.pop()!
-    if (node.isDirectory) {
-      if (node.children) stack.push(...node.children)
-    } else {
-      files.push(node)
-    }
-  }
-  files.sort((a, b) => b.size - a.size)
-  return files.slice(0, count)
-}
-
-ipcMain.handle('get-top-files', (_event, count = 100) => {
+secureHandle('get-top-files', (_event, count) => {
   if (!fullScanCache) return null
-  return collectTopFiles(fullScanCache, count)
+  return collectTopFiles(fullScanCache, asInt(count, 100, 1, 1000))
 })
 
 /**
@@ -453,7 +434,7 @@ ipcMain.handle('get-top-files', (_event, count = 100) => {
  * file extension: .json gets a structured summary, anything else gets CSV of
  * the top files. Returns the saved path, or null if cancelled.
  */
-ipcMain.handle('export-report', async () => {
+secureHandle('export-report', async () => {
   if (!fullScanCache || !mainWindow) return null
 
   const date = new Date().toISOString().slice(0, 10)
@@ -500,9 +481,9 @@ ipcMain.handle('export-report', async () => {
  * Sums file sizes per category for the subtree rooted at `dirPath`
  * (defaults to the scan root), size-descending.
  */
-ipcMain.handle('get-category-breakdown', (_event, dirPath?: string) => {
+secureHandle('get-category-breakdown', (_event, rawPath) => {
   if (!fullScanCache) return null
-  const root = dirPath ? findNodeByPath(fullScanCache, dirPath) : fullScanCache
+  const root = rawPath === undefined || rawPath === null ? fullScanCache : findScannedNode(rawPath)
   if (!root) return null
 
   const sizes = new Map<string, number>()
@@ -523,158 +504,47 @@ ipcMain.handle('get-category-breakdown', (_event, dirPath?: string) => {
   return breakdown
 })
 
-/**
- * Searches the whole cached scan by name substring (case-insensitive) and
- * returns the largest `limit` matches. Directory matches are returned
- * without their children to keep the IPC payload small.
- */
-ipcMain.handle('search-files', (_event, query: string, limit = 200) => {
+/** Searches the whole cached scan by name substring and returns the largest `limit` matches. */
+secureHandle('search-files', (_event, query, limit) => {
   if (!fullScanCache) return null
-  const needle = query.trim().toLowerCase()
-  if (!needle) return []
-
-  const matches: FileNode[] = []
-  const stack: FileNode[] = [fullScanCache]
-  while (stack.length > 0) {
-    const node = stack.pop()!
-    if (node.name.toLowerCase().includes(needle)) {
-      matches.push(
-        node.isDirectory
-          ? { ...node, children: undefined, childCount: node.children?.length ?? node.childCount }
-          : node
-      )
-    }
-    if (node.children) stack.push(...node.children)
-  }
-
-  matches.sort((a, b) => b.size - a.size)
-  return matches.slice(0, limit)
+  return searchTree(fullScanCache, asQuery(query), asInt(limit, 200, 1, 1000))
 })
 
-/** Streams a file's content through MD5 without loading it fully into memory. */
-function hashFile(filePath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash('md5')
-    const stream = fs.createReadStream(filePath)
-    stream.on('data', (chunk) => hash.update(chunk))
-    stream.on('end', () => resolve(hash.digest('hex')))
-    stream.on('error', reject)
+secureHandle('find-duplicates', async () => {
+  if (!fullScanCache) return null
+  return findDuplicateGroups(fullScanCache, {
+    onProgress: (hashed) => mainWindow?.webContents.send('duplicates-progress', { hashed }),
   })
-}
-
-/** Files smaller than this are ignored by the duplicate finder — too many, too little payoff. */
-const MIN_DUPLICATE_SIZE = 4096
-/** Upper bound on how many files we'll actually hash per search, so a huge drive can't hang it. */
-const DUPLICATE_HASH_BUDGET = 8000
-
-/**
- * Finds duplicate files across the whole cached scan. Groups files by size
- * first (cheap), then hashes only the size-groups with the most potential
- * wasted space first, up to a hash budget, so this stays fast on drives with
- * hundreds of thousands of files. Emits `duplicates-progress` as it hashes.
- */
-ipcMain.handle('find-duplicates', async () => {
-  if (!fullScanCache) return null
-
-  const bySize = new Map<number, FileNode[]>()
-  const stack: FileNode[] = [fullScanCache]
-  while (stack.length > 0) {
-    const node = stack.pop()!
-    if (node.isDirectory) {
-      if (node.children) stack.push(...node.children)
-    } else if (node.size >= MIN_DUPLICATE_SIZE) {
-      const group = bySize.get(node.size)
-      if (group) group.push(node)
-      else bySize.set(node.size, [node])
-    }
-  }
-
-  const candidateGroups = [...bySize.values()]
-    .filter((files) => files.length > 1)
-    .sort((a, b) => b[0].size * (b.length - 1) - a[0].size * (a.length - 1))
-
-  const results: DuplicateGroup[] = []
-  let hashed = 0
-
-  for (const group of candidateGroups) {
-    if (hashed >= DUPLICATE_HASH_BUDGET) break
-
-    const byHash = new Map<string, FileNode[]>()
-    for (const file of group) {
-      if (hashed >= DUPLICATE_HASH_BUDGET) break
-      try {
-        const hash = await hashFile(file.path)
-        const existing = byHash.get(hash)
-        if (existing) existing.push(file)
-        else byHash.set(hash, [file])
-      } catch {
-        // Unreadable (permissions, locked file, etc.) — skip it.
-      }
-      hashed++
-      if (hashed % 25 === 0) {
-        mainWindow?.webContents.send('duplicates-progress', { hashed })
-      }
-    }
-
-    for (const [hash, files] of byHash) {
-      if (files.length > 1) {
-        results.push({ hash, size: files[0].size, files })
-      }
-    }
-  }
-
-  results.sort((a, b) => b.size * (b.files.length - 1) - a.size * (a.files.length - 1))
-  return results.slice(0, 200)
 })
 
-/** Directory names recognized as safe-to-review cleanup candidates (build artifacts, caches, deps). */
-const JUNK_DIR_NAMES = new Set([
-  'node_modules', 'dist', 'build', 'out', '.next', '.nuxt', '.turbo', '.cache',
-  '__pycache__', '.pytest_cache', '.tox', '.venv', 'venv', '.gradle', 'target',
-  'coverage', '.parcel-cache', '.angular', '.svelte-kit',
-])
-
-/**
- * Walks the cached scan looking for directories matching JUNK_DIR_NAMES.
- * Stops descending once a match is found (no point reporting nested matches
- * inside e.g. node_modules). Only sees what the scan actually walked — most
- * of these names are skipped by the scan itself unless "include hidden" was on.
- */
-function collectJunkDirs(root: FileNode): CleanupSuggestion[] {
-  const results: CleanupSuggestion[] = []
-  const stack: FileNode[] = [root]
-  while (stack.length > 0) {
-    const node = stack.pop()!
-    if (!node.isDirectory) continue
-    if (JUNK_DIR_NAMES.has(node.name)) {
-      results.push({ path: node.path, name: node.name, size: node.size, pattern: node.name })
-      continue
-    }
-    if (node.children) stack.push(...node.children)
-  }
-  results.sort((a, b) => b.size - a.size)
-  return results.slice(0, 100)
-}
-
-ipcMain.handle('get-cleanup-suggestions', () => {
+secureHandle('get-cleanup-suggestions', () => {
   if (!fullScanCache) return null
   return collectJunkDirs(fullScanCache)
 })
 
-ipcMain.handle('reveal-in-folder', (_event, targetPath: string) => {
-  shell.showItemInFolder(targetPath)
+secureHandle('reveal-in-folder', (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  if (node) shell.showItemInFolder(node.path)
 })
 
-ipcMain.handle('move-to-trash', async (_event, targetPath: string) => {
+/**
+ * Moves a scanned file or folder to the trash. Refuses anything that is not part of
+ * the current scan, the scan root, and filesystem roots. On success the item is also
+ * dropped from the cache so later queries stay consistent.
+ */
+secureHandle('move-to-trash', async (_event, targetPath) => {
+  const node = findScannedNode(targetPath)
+  if (!node || !fullScanCache || node === fullScanCache || isFilesystemRoot(node.path)) return false
   try {
-    await shell.trashItem(targetPath)
-    return true
+    await shell.trashItem(node.path)
   } catch {
     return false
   }
+  removeNode(fullScanCache, node.path)
+  return true
 })
 
-ipcMain.handle('cancel-scan', () => {
+secureHandle('cancel-scan', () => {
   scanAbortController?.abort()
   scanAbortController = null
 })
@@ -684,105 +554,9 @@ ipcMain.handle('cancel-scan', () => {
  * scan result (one additional level of depth), so the renderer can populate
  * nodes it did not receive in the initial shallow payload.
  */
-ipcMain.handle('expand-directory', (_event, dirPath: string) => {
-  if (!fullScanCache) return null
-  const node = findNodeByPath(fullScanCache, dirPath)
+secureHandle('expand-directory', (_event, dirPath) => {
+  const node = findScannedNode(dirPath)
   if (!node || !node.isDirectory || !node.children) return null
   // Return shallow children (one more level so the user sees sub-items too).
   return node.children.map((child) => buildShallowTree(child, 0, 1))
 })
-
-/** Directory names skipped during scans on every platform. */
-const SKIPPED_DIR_NAMES = new Set(['node_modules', '$Recycle.Bin', 'System Volume Information'])
-
-/**
- * Absolute paths skipped during scans on macOS: /System/Volumes contains the
- * Data volume (already counted via firmlinks such as /Users and /Applications)
- * and /Volumes holds external drives, which should be scanned individually.
- */
-const DARWIN_SKIPPED_PATHS = new Set(['/System/Volumes', '/Volumes', '/dev'])
-
-async function scanDir(
-  dirPath: string,
-  signal: AbortSignal,
-  onProgress: (info: ScanProgress) => void,
-  includeHidden = false,
-  counter = { count: 0 },
-  excludePatterns: string[] = []
-): Promise<FileNode> {
-  if (signal.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-
-  const name = getDisplayNameForPath(dirPath)
-  const node: FileNode = {
-    name,
-    path: dirPath,
-    size: 0,
-    isDirectory: true,
-    children: [],
-  }
-
-  let entries: fs.Dirent[]
-  try {
-    entries = await fs.promises.readdir(dirPath, { withFileTypes: true })
-  } catch {
-    // Typically a permissions error (e.g. macOS TCC-protected folders).
-    // Flag it so the renderer can tell the user why the size reads 0.
-    node.inaccessible = true
-    return node
-  }
-
-  for (const entry of entries) {
-    if (signal.aborted) throw new DOMException('Scan cancelled', 'AbortError')
-
-    const fullPath = path.join(dirPath, entry.name)
-
-    if (entry.isDirectory()) {
-      // Skip hidden/system directories unless the user opted in.
-      if (!includeHidden && (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name))) {
-        continue
-      }
-      // Skip directories the user explicitly excluded (independent of includeHidden).
-      if (excludePatterns.some((pattern) => pattern.toLowerCase() === entry.name.toLowerCase())) {
-        continue
-      }
-      // On macOS, skip mount points that would double-count data (the Data
-      // volume is already reachable through firmlinks like /Users) or pull in
-      // external drives when scanning from the root. Never optional: these
-      // would corrupt totals, not just hide detail.
-      if (process.platform === 'darwin' && DARWIN_SKIPPED_PATHS.has(fullPath)) {
-        continue
-      }
-      const childNode = await scanDir(fullPath, signal, onProgress, includeHidden, counter, excludePatterns)
-      node.children!.push(childNode)
-      node.size += childNode.size
-    } else if (entry.isFile()) {
-      try {
-        const stats = await fs.promises.stat(fullPath)
-        const ext = path.extname(entry.name).toLowerCase()
-        node.children!.push({
-          name: entry.name,
-          path: fullPath,
-          size: stats.size,
-          isDirectory: false,
-          extension: ext,
-          mtime: stats.mtimeMs,
-        })
-        node.size += stats.size
-      } catch {
-        // Skip files we can't read
-      }
-    }
-
-    counter.count++
-    if (counter.count % 100 === 0) {
-      onProgress({ scanned: counter.count, currentPath: fullPath })
-      // Yield to the event loop between batches so IPC/UI messages are processed.
-      await new Promise<void>((resolve) => setImmediate(resolve))
-    }
-  }
-
-  // Sort children by size descending
-  node.children!.sort((a, b) => b.size - a.size)
-
-  return node
-}

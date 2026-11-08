@@ -7,13 +7,15 @@ import { useI18n } from '../i18n'
 interface CategoryBarProps {
   /** Path of the directory whose subtree is summarized. */
   path: string
+  /** Change this to re-read the breakdown (e.g. after items were moved to the trash). */
+  refreshKey?: number
 }
 
 /**
  * Stacked bar showing how the current folder's bytes split across file
  * categories, with a per-category legend (only categories that are present).
  */
-export default function CategoryBar({ path }: CategoryBarProps) {
+export default function CategoryBar({ path, refreshKey = 0 }: CategoryBarProps) {
   const { t } = useI18n()
   const [breakdown, setBreakdown] = useState<CategoryBreakdown[] | null>(null)
 
@@ -25,7 +27,7 @@ export default function CategoryBar({ path }: CategoryBarProps) {
     return () => {
       cancelled = true
     }
-  }, [path])
+  }, [path, refreshKey])
 
   const total = (breakdown ?? []).reduce((acc, item) => acc + item.size, 0)
   if (!breakdown || total === 0) return null

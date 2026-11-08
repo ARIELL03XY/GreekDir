@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DuplicateGroup, FileNode } from '../types'
 import { formatSize } from '../utils/format'
 import { getFileColor } from '../utils/colors'
 import { useI18n } from '../i18n'
+import { useTrashSelection } from '../hooks/useTrashSelection'
 import BulkActionBar from './BulkActionBar'
 
 interface DuplicatesListProps {
   onSelect: (node: FileNode) => void
   onContextMenu?: (event: React.MouseEvent, node: FileNode) => void
+  /** Paths already moved to the trash during this session; they are hidden from the groups. */
+  trashedPaths: Set<string>
+  /** Called with the paths that were really moved to the trash. */
+  onTrashed: (paths: string[]) => void
 }
 
 /**
@@ -15,11 +20,11 @@ interface DuplicatesListProps {
  * Fetched on demand (not part of the initial scan) since hashing is
  * comparatively expensive; see find-duplicates in electron/main.ts.
  */
-export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesListProps) {
+export default function DuplicatesList({ onSelect, onContextMenu, trashedPaths, onTrashed }: DuplicatesListProps) {
   const { t } = useI18n()
-  const [groups, setGroups] = useState<DuplicateGroup[] | null>(null)
+  const [found, setFound] = useState<DuplicateGroup[] | null>(null)
   const [hashed, setHashed] = useState(0)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { selected, toggle, clear, result, dismissResult, trashSelected } = useTrashSelection(onTrashed)
 
   useEffect(() => {
     let cancelled = false
@@ -27,7 +32,7 @@ export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesLi
       if (!cancelled) setHashed(progress.hashed)
     })
     window.electronAPI.findDuplicates().then((result) => {
-      if (!cancelled) setGroups(result ?? [])
+      if (!cancelled) setFound(result ?? [])
     })
     return () => {
       cancelled = true
@@ -35,21 +40,21 @@ export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesLi
     }
   }, [])
 
-  const toggleSelected = (path: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
-  }
+  // Hide files that were moved to the trash; a group with a single copy left is no longer a duplicate.
+  const groups = useMemo(
+    () =>
+      (found ?? [])
+        .map((group) => ({ ...group, files: group.files.filter((file) => !trashedPaths.has(file.path)) }))
+        .filter((group) => group.files.length > 1),
+    [found, trashedPaths]
+  )
 
-  const handleBulkTrash = async () => {
-    await Promise.all([...selected].map((path) => window.electronAPI.moveToTrash(path)))
-    setSelected(new Set())
-  }
+  // Never allow deleting every copy of something: at least one file per group must stay.
+  const groupsWithoutSurvivor = groups.filter((group) => group.files.every((file) => selected.has(file.path))).length
+  const blockedReason =
+    groupsWithoutSurvivor > 0 ? t('bulk.keepOne', { count: groupsWithoutSurvivor }) : undefined
 
-  if (groups === null) {
+  if (found === null) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3">
         <div className="w-6 h-6 rounded-full border-2 border-cream-300 border-t-accent animate-spin" />
@@ -60,8 +65,10 @@ export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesLi
 
   if (groups.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="relative h-full flex items-center justify-center">
         <p className="text-sand-400">{t('duplicates.empty')}</p>
+        {/* Still shown so the outcome of the move that emptied the list stays visible. */}
+        <BulkActionBar count={0} onTrash={trashSelected} onClear={clear} result={result} onDismissResult={dismissResult} />
       </div>
     )
   }
@@ -89,7 +96,7 @@ export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesLi
                   <input
                     type="checkbox"
                     checked={selected.has(file.path)}
-                    onChange={() => toggleSelected(file.path)}
+                    onChange={() => toggle(file.path)}
                     className="accent-accent w-4 h-4"
                   />
                 </span>
@@ -107,9 +114,14 @@ export default function DuplicatesList({ onSelect, onContextMenu }: DuplicatesLi
           </div>
         ))}
       </div>
-      {selected.size > 0 && (
-        <BulkActionBar count={selected.size} onTrash={handleBulkTrash} onClear={() => setSelected(new Set())} />
-      )}
+      <BulkActionBar
+        count={selected.size}
+        onTrash={trashSelected}
+        onClear={clear}
+        result={result}
+        onDismissResult={dismissResult}
+        blockedReason={blockedReason}
+      />
     </div>
   )
 }

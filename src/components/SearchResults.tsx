@@ -11,17 +11,20 @@ interface SearchResultsProps {
   totalSize: number
   onSelect: (node: FileNode) => void
   onContextMenu?: (event: React.MouseEvent, node: FileNode) => void
+  /** Paths already moved to the trash during this session; they are hidden from the results. */
+  trashedPaths: Set<string>
 }
 
 /** Whole-scan search results, largest first, served by the main process. */
-export default function SearchResults({ query, totalSize, onSelect, onContextMenu }: SearchResultsProps) {
+export default function SearchResults({ query, totalSize, onSelect, onContextMenu, trashedPaths }: SearchResultsProps) {
   const { t } = useI18n()
-  const [results, setResults] = useState<FileNode[] | null>(null)
+  const [found, setFound] = useState<FileNode[] | null>(null)
+  const results = found === null ? null : found.filter((node) => !trashedPaths.has(node.path))
 
   useEffect(() => {
     let cancelled = false
     window.electronAPI.searchFiles(query, 200).then((matches) => {
-      if (!cancelled) setResults(matches ?? [])
+      if (!cancelled) setFound(matches ?? [])
     })
     return () => {
       cancelled = true
