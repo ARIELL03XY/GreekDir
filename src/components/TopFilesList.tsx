@@ -3,6 +3,7 @@ import { FileNode } from '../types'
 import { formatSize, getPercentage } from '../utils/format'
 import { getFileColor } from '../utils/colors'
 import { useI18n } from '../i18n'
+import { useTrashSelection } from '../hooks/useTrashSelection'
 import BulkActionBar from './BulkActionBar'
 
 interface TopFilesListProps {
@@ -12,19 +13,32 @@ interface TopFilesListProps {
   /** Case-insensitive name/extension/path filter. */
   filter?: string
   onContextMenu?: (event: React.MouseEvent, node: FileNode) => void
+  /** Paths already moved to the trash during this session; they are hidden from the list. */
+  trashedPaths: Set<string>
+  /** Called with the paths that were really moved to the trash. */
+  onTrashed: (paths: string[]) => void
 }
 
 /**
  * Shows the largest files of the entire scan (not just the current folder),
  * fetched from the main-process cache.
  */
-export default function TopFilesList({ totalSize, onSelect, filter = '', onContextMenu }: TopFilesListProps) {
+export default function TopFilesList({
+  totalSize,
+  onSelect,
+  filter = '',
+  onContextMenu,
+  trashedPaths,
+  onTrashed,
+}: TopFilesListProps) {
   const { t } = useI18n()
   const [files, setFiles] = useState<FileNode[] | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { selected, toggle, replace, clear, result, dismissResult, trashSelected } = useTrashSelection(onTrashed)
   const query = filter.trim().toLowerCase()
   const visibleFiles = (files ?? []).filter(
-    (file) => !query || file.name.toLowerCase().includes(query) || file.path.toLowerCase().includes(query)
+    (file) =>
+      !trashedPaths.has(file.path) &&
+      (!query || file.name.toLowerCase().includes(query) || file.path.toLowerCase().includes(query))
   )
 
   useEffect(() => {
@@ -37,23 +51,10 @@ export default function TopFilesList({ totalSize, onSelect, filter = '', onConte
     }
   }, [])
 
-  const toggleSelected = (path: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
-  }
-
   const allVisibleSelected = visibleFiles.length > 0 && visibleFiles.every((file) => selected.has(file.path))
   const toggleSelectAll = () => {
-    setSelected(allVisibleSelected ? new Set() : new Set(visibleFiles.map((file) => file.path)))
-  }
-
-  const handleBulkTrash = async () => {
-    await Promise.all([...selected].map((path) => window.electronAPI.moveToTrash(path)))
-    setSelected(new Set())
+    if (allVisibleSelected) clear()
+    else replace(visibleFiles.map((file) => file.path))
   }
 
   if (files === null) {
@@ -97,7 +98,7 @@ export default function TopFilesList({ totalSize, onSelect, filter = '', onConte
                   <input
                     type="checkbox"
                     checked={selected.has(file.path)}
-                    onChange={() => toggleSelected(file.path)}
+                    onChange={() => toggle(file.path)}
                     className="accent-accent w-4 h-4"
                   />
                 </td>
@@ -128,9 +129,13 @@ export default function TopFilesList({ totalSize, onSelect, filter = '', onConte
           <div className="p-8 text-center text-sand-400">{t('file.emptyFolder')}</div>
         )}
       </div>
-      {selected.size > 0 && (
-        <BulkActionBar count={selected.size} onTrash={handleBulkTrash} onClear={() => setSelected(new Set())} />
-      )}
+      <BulkActionBar
+        count={selected.size}
+        onTrash={trashSelected}
+        onClear={clear}
+        result={result}
+        onDismissResult={dismissResult}
+      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileNode } from '../types'
 import Treemap from './Treemap'
 import FileList from './FileList'
@@ -38,6 +38,8 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
   const [filter, setFilter] = useState('')
   const [debouncedFilter, setDebouncedFilter] = useState('')
   const [exportState, setExportState] = useState<'idle' | 'done'>('idle')
+  /** Everything moved to the trash this session. Hidden from every view; sizes refresh on rescan. */
+  const [trashedPaths, setTrashedPaths] = useState<Set<string>>(new Set())
   const breadcrumbsRef = useRef<HTMLElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -148,8 +150,19 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
     setSelectedFile(null)
   }, [breadcrumbs])
 
-  // The node passed to child components always carries its effective children.
-  const currentNodeForDisplay = withExpandedChildren(currentNode)
+  const markTrashed = useCallback((paths: string[]) => {
+    setTrashedPaths((prev) => new Set([...prev, ...paths]))
+  }, [])
+
+  // The node passed to child components always carries its effective children, minus anything
+  // already moved to the trash (and its size, so totals and percentages stay roughly right).
+  const currentNodeForDisplay = useMemo(() => {
+    const node = withExpandedChildren(currentNode)
+    if (trashedPaths.size === 0 || !node.children) return node
+    const kept = node.children.filter((child) => !trashedPaths.has(child.path))
+    const removedSize = node.children.reduce((sum, child) => (trashedPaths.has(child.path) ? sum + child.size : sum), 0)
+    return { ...node, children: kept, size: Math.max(0, node.size - removedSize) }
+  }, [withExpandedChildren, currentNode, trashedPaths])
 
   return (
     <div className="h-full flex">
@@ -208,7 +221,7 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
               className="w-44 rounded-lg border border-cream-300 bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-sand-400 outline-none focus:border-accent/50"
             />
             <span className="text-sm text-sand-500 whitespace-nowrap">
-              {formatSize(currentNode.size)} {t('common.total')}
+              {formatSize(currentNodeForDisplay.size)} {t('common.total')}
             </span>
             <div className="flex items-center bg-cream-200 rounded-lg p-1">
               <button
@@ -272,10 +285,11 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
               totalSize={data.size}
               onSelect={setSelectedFile}
               onContextMenu={openContextMenu}
+              trashedPaths={trashedPaths}
             />
           ) : viewMode === 'treemap' ? (
             <div className="h-full flex flex-col gap-3">
-              <CategoryBar path={currentNode.path} />
+              <CategoryBar path={currentNode.path} refreshKey={trashedPaths.size} />
               <div className="min-h-0 flex-1">
                 <Treemap
                   data={currentNodeForDisplay}
@@ -290,23 +304,30 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
               data={currentNodeForDisplay}
               onSelect={handleDrillDown}
               onContextMenu={openContextMenu}
+              onTrashed={markTrashed}
             />
           ) : viewMode === 'topfiles' ? (
             <TopFilesList
               totalSize={data.size}
               onSelect={setSelectedFile}
               onContextMenu={openContextMenu}
+              trashedPaths={trashedPaths}
+              onTrashed={markTrashed}
             />
           ) : viewMode === 'duplicates' ? (
             <DuplicatesList
               onSelect={setSelectedFile}
               onContextMenu={openContextMenu}
+              trashedPaths={trashedPaths}
+              onTrashed={markTrashed}
             />
           ) : (
             <CleanupSuggestions
               onSelect={setSelectedFile}
               onContextMenu={openContextMenu}
               includeHidden={includeHidden}
+              trashedPaths={trashedPaths}
+              onTrashed={markTrashed}
             />
           )}
         </div>
@@ -317,6 +338,7 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
           file={selectedFile}
           totalSize={currentNode.size}
           onClose={() => setSelectedFile(null)}
+          onTrashed={markTrashed}
         />
       )}
 
@@ -325,6 +347,7 @@ export default function ResultsView({ data, onBackHome, onRescan, includeHidden 
           menu={contextMenu}
           onShowDetails={setSelectedFile}
           onClose={() => setContextMenu(null)}
+          onTrashed={markTrashed}
         />
       )}
     </div>

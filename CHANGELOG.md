@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **CI and releases.** GitHub Actions runs lint, typecheck, tests and a production dependency audit on every push and pull request, and builds the Windows installer. Pushing a `v*` tag builds the installer and creates a **draft** GitHub release with its SHA-256. Dependabot keeps npm packages and the (SHA-pinned) actions up to date.
+- **Run once, without installing**: the Windows installer now opens with a choice between installing GreekDir and running it once. "Run once" unpacks the app into a temporary folder, runs it with temporary settings, and deletes everything when it is closed — no registry entries, shortcuts or saved preferences. Also available as `GreekDir-Setup.exe /RUNONCE`. See `build/README.md`.
+
 - **Duplicate finder**: a "Duplicates" tab groups files by size, hashes the size-groups with the most potential wasted space first (bounded by a hash budget so it stays fast on large drives), and lists them sorted by wasted space, largest first.
 - **Cleanup suggestions**: a "Cleanup" tab surfaces known build-artifact/cache/dependency folders already present in the scan (`node_modules`, `dist`, `.cache`, …), sorted by size.
 - **Multi-select + bulk trash**: checkboxes in the List, Top files, Duplicates, and Cleanup tables, with a floating action bar to move several items to the trash at once (two-step confirm, same as the single-file action).
@@ -32,8 +35,29 @@ All notable changes to this project will be documented in this file.
 - Windows v1 scope and Microsoft Store publishing checklists in `/docs`.
 - Initial privacy and support documentation templates.
 
+### Security
+
+- **Electron 31 → 45** (Chromium 126 → 156). The previous version was out of support and carried dozens of published advisories.
+- **No more network access.** Inter and JetBrains Mono are now bundled with the app (SIL OFL-1.1) instead of being loaded from Google Fonts, so GreekDir really never connects to the internet. A full page reload makes only local file requests.
+- **Content-Security-Policy** in the packaged app (own files only; no network, plugins or inline scripts), plus an explicit renderer sandbox, no new windows, no navigation away from the app, and all browser permission requests denied.
+- **Electron fuses hardened**: `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` are disabled, and the app can only load from an integrity-checked `app.asar`. The packaged binary can no longer be used as a general-purpose Node interpreter.
+
+- **IPC hardening.** Every main-process handler now rejects calls that do not come from the app's own main window, validates its arguments, and only acts on paths that exist in the current scan. The scan root and filesystem roots can never be trashed, and anything outside the scan (relative paths, `..` traversal, NUL bytes, wrong types) is refused.
+
+### Changed
+
+- **Minimum macOS is now 13 (Ventura)**, a consequence of the Electron 45 upgrade (Windows 10 or later is unchanged). The website, its privacy policy and its support page were updated accordingly and now describe the Install / Run once installer, the no-network guarantee and the new safeguards.
+- **Direct distribution only.** The Microsoft Store (APPX) build, its configuration and its scripts were removed. React, D3 and the fonts are bundled by Vite, so the app now ships no runtime dependencies: `app.asar` went from 8.7 MB to 0.6 MB and the installer shrank accordingly.
+- Security updates for build-time dependencies (`npm audit fix`). The remaining advisories (`vite` 5, `vitest` 3) affect development tooling only, never the installer, and need a major-version migration that is tracked separately.
+- The `LICENSE` and the website footer now credit `CHV Network Technologies`.
+- The scanner, duplicate finder, cleanup finder and search moved out of `electron/main.ts` into Electron-free modules (`electron/scanner.ts`, `electron/validation.ts`), and `npm test` (Vitest) now covers them. `npm run lint` also covers `electron/`.
+- The publisher and author metadata now read `CHV Network Technologies` (executable, installer, uninstaller entry) and `ARIELL03XY` (package author), and the application ID is `com.chvnetworktechnologies.greekdir`.
+
 ### Fixed
 
+- **Bulk move to trash no longer ignores failures.** The result bar now says how many items were really moved and how many were not (in use, no permission, already gone); the ones that failed stay selected so they can be retried, and the right-click menu now shows an error instead of silently closing. Trashed items disappear from every view and from the scan cache.
+- **Duplicates: the last copy is protected.** Selecting every copy of a duplicate group disables "Move to trash" and explains why, so a file can no longer be deleted by accident.
+- **The window can no longer open off-screen** when it was last used on a monitor that is no longer connected: the saved position is ignored (the size is kept) and the window is centred.
 - **macOS**: scanning `/` no longer double-counts data through APFS firmlinks (`/System/Volumes/Data`) and no longer descends into `/Volumes` (external drives are scanned individually).
 - **macOS**: the disk list hides APFS helper volumes (Preboot, Update, Data, VM) and reports real container usage instead of the sealed system volume's own blocks.
 - **macOS**: frameless window is draggable again (missing drag-region CSS) and the traffic lights no longer overlap the header.

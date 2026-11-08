@@ -3,6 +3,7 @@ import { CleanupSuggestion, FileNode } from '../types'
 import { formatSize } from '../utils/format'
 import { DIRECTORY_COLOR } from '../utils/colors'
 import { useI18n } from '../i18n'
+import { useTrashSelection } from '../hooks/useTrashSelection'
 import BulkActionBar from './BulkActionBar'
 
 interface CleanupSuggestionsProps {
@@ -10,44 +11,42 @@ interface CleanupSuggestionsProps {
   onContextMenu?: (event: React.MouseEvent, node: FileNode) => void
   /** Whether this scan included hidden/system folders — most junk patterns live behind that flag. */
   includeHidden: boolean
+  /** Paths already moved to the trash during this session; they are hidden from the list. */
+  trashedPaths: Set<string>
+  /** Called with the paths that were really moved to the trash. */
+  onTrashed: (paths: string[]) => void
 }
 
 /**
  * Known build-artifact/cache/dependency directories (node_modules, dist, .cache, …)
  * found within the current scan. See get-cleanup-suggestions in electron/main.ts.
  */
-export default function CleanupSuggestions({ onSelect, onContextMenu, includeHidden }: CleanupSuggestionsProps) {
+export default function CleanupSuggestions({
+  onSelect,
+  onContextMenu,
+  includeHidden,
+  trashedPaths,
+  onTrashed,
+}: CleanupSuggestionsProps) {
   const { t } = useI18n()
-  const [items, setItems] = useState<CleanupSuggestion[] | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [found, setFound] = useState<CleanupSuggestion[] | null>(null)
+  const { selected, toggle, replace, clear, result, dismissResult, trashSelected } = useTrashSelection(onTrashed)
+  const items = found === null ? null : found.filter((item) => !trashedPaths.has(item.path))
 
   useEffect(() => {
     let cancelled = false
     window.electronAPI.getCleanupSuggestions().then((result) => {
-      if (!cancelled) setItems(result ?? [])
+      if (!cancelled) setFound(result ?? [])
     })
     return () => {
       cancelled = true
     }
   }, [])
 
-  const toggleSelected = (path: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
-  }
-
   const allSelected = (items?.length ?? 0) > 0 && items!.every((item) => selected.has(item.path))
   const toggleSelectAll = () => {
-    setSelected(allSelected ? new Set() : new Set((items ?? []).map((item) => item.path)))
-  }
-
-  const handleBulkTrash = async () => {
-    await Promise.all([...selected].map((path) => window.electronAPI.moveToTrash(path)))
-    setSelected(new Set())
+    if (allSelected) clear()
+    else replace((items ?? []).map((item) => item.path))
   }
 
   const toNode = (item: CleanupSuggestion): FileNode => ({
@@ -107,7 +106,7 @@ export default function CleanupSuggestions({ onSelect, onContextMenu, includeHid
                     <input
                       type="checkbox"
                       checked={selected.has(item.path)}
-                      onChange={() => toggleSelected(item.path)}
+                      onChange={() => toggle(item.path)}
                       className="accent-accent w-4 h-4"
                     />
                   </td>
@@ -130,9 +129,13 @@ export default function CleanupSuggestions({ onSelect, onContextMenu, includeHid
           </table>
         </div>
       )}
-      {selected.size > 0 && (
-        <BulkActionBar count={selected.size} onTrash={handleBulkTrash} onClear={() => setSelected(new Set())} />
-      )}
+      <BulkActionBar
+        count={selected.size}
+        onTrash={trashSelected}
+        onClear={clear}
+        result={result}
+        onDismissResult={dismissResult}
+      />
     </div>
   )
 }

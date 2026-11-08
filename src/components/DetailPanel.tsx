@@ -8,11 +8,13 @@ interface DetailPanelProps {
   file: FileNode
   totalSize: number
   onClose: () => void
+  /** Called with the path once it was really moved to the trash. */
+  onTrashed: (paths: string[]) => void
 }
 
 type TrashState = 'idle' | 'confirm' | 'done' | 'error'
 
-export default function DetailPanel({ file, totalSize, onClose }: DetailPanelProps) {
+export default function DetailPanel({ file, totalSize, onClose, onTrashed }: DetailPanelProps) {
   const { language, t } = useI18n()
   const [trashState, setTrashState] = useState<TrashState>('idle')
   const category = file.isDirectory ? 'directories' : getFileCategory(file.extension)
@@ -29,8 +31,9 @@ export default function DetailPanel({ file, totalSize, onClose }: DetailPanelPro
       return
     }
     if (trashState !== 'confirm') return
-    const ok = await window.electronAPI.moveToTrash(file.path)
+    const ok = await window.electronAPI.moveToTrash(file.path).catch(() => false)
     setTrashState(ok ? 'done' : 'error')
+    if (ok) onTrashed([file.path])
   }
 
   return (

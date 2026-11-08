@@ -5,20 +5,29 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder --publish never",
-    "build:win": "tsc && vite build && electron-builder --win nsis --x64 --publish never",
-    "build:mac": "tsc && vite build && electron-builder --mac --publish never",
-    "build:store": "tsc && vite build && electron-builder --win appx --x64 --config electron-builder.store.json --publish never",
-    "release:checklist": "echo \"See /docs/microsoft-store-checklist.md\"",
+    "build": "npm run patch:builder && tsc && vite build && electron-builder --publish never",
+    "build:win": "npm run patch:builder && tsc && vite build && electron-builder --win nsis --x64 --publish never",
+    "build:mac": "npm run patch:builder && tsc && vite build && electron-builder --mac --publish never",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src electron --ext .ts,.tsx",
+    "patch:builder": "node scripts/patch-electron-builder.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": ["disk-analyzer", "windirstat", "electron", "treemap"],
-  "author": "arieljesuscv23",
+  "keywords": [
+    "disk-analyzer",
+    "windirstat",
+    "electron",
+    "treemap"
+  ],
+  "author": {
+    "name": "ARIELL03XY",
+    "url": "https://github.com/ARIELL03XY"
+  },
   "license": "MIT",
   "build": {
-    "appId": "com.arieljesuscv23.greekdir",
+    "appId": "com.chvnetworktechnologies.greekdir",
     "productName": "GreekDir",
     "files": [
       "dist/**/*",
@@ -37,7 +46,9 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "script": "build/installer.nsi",
+      "include": "build/greekdir-installer.nsh"
     },
     "mac": {
       "target": [
@@ -50,31 +61,49 @@
       "icon": "build/icon.icns",
       "artifactName": "${productName}-${version}-universal.${ext}",
       "identity": null
+    },
+    "copyright": "Copyright © 2026 CHV Network Technologies",
+    "extraMetadata": {
+      "author": {
+        "name": "CHV Network Technologies"
+      }
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
     }
   },
-  "dependencies": {
-    "d3": "^7.9.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
   "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "@types/d3": "^7.4.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "concurrently": "^8.2.2",
-    "electron": "^31.2.0",
-    "electron-builder": "^24.13.3",
+    "d3": "^7.9.0",
+    "electron": "^45.2.3",
+    "electron-builder": "26.18.0",
     "eslint": "^8.57.0",
     "postcss": "^8.4.39",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.3",
     "vite": "^5.3.3",
     "vite-plugin-electron": "^0.28.7",
     "vite-plugin-electron-renderer": "^0.14.5",
+    "vitest": "^3.2.7",
     "wait-on": "^7.2.0"
+  },
+  "allowScripts": {
+    "electron@45.2.3": true,
+    "esbuild@0.21.5": true
   }
 }

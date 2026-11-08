@@ -57,7 +57,7 @@ This opens the Electron app with hot reload enabled.
 npm run build
 ```
 
-This generates the executable for your platform in the `dist/` folder.
+This generates the installer for your platform in the `release/` folder.
 
 ### Windows-specific builds
 
@@ -65,18 +65,14 @@ This generates the executable for your platform in the `dist/` folder.
 npm run build:win
 ```
 
-Builds a Windows installer (`NSIS`) in the `release/` folder.
+Builds the Windows installer (`NSIS`) in the `release/` folder. It opens with a choice between **installing** GreekDir and **running it once without installing** (nothing is written to the system and everything is deleted when you close the app). The same mode is available from the command line: `GreekDir-Setup-<version>.exe /RUNONCE`. See [`build/README.md`](build/README.md) for how the installer is wired.
+
+### Tests
 
 ```bash
-npm run build:store
+npm test        # Vitest: scanner, duplicate/cleanup finders, IPC argument validation
+npm run lint
 ```
-
-Builds a Microsoft Store package (`APPX`) in the `release/` folder.
-Before running this command, set:
-
-- `GREEKDIR_IDENTITY_NAME`
-- `GREEKDIR_PUBLISHER`
-- `GREEKDIR_PUBLISHER_DISPLAY_NAME`
 
 ## 📁 Project Structure
 
