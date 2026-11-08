@@ -76,6 +76,11 @@ jobs:
       # Unit tests on macOS too (case-insensitive paths, ~/.Trash, …).
       - run: npm test
       - run: npm run build:mac
+        env:
+          # electron-builder skips signing in pull requests (to keep certificates away from forks). Ours is an
+          # ad-hoc signature with no secrets, and without it the bundle ships with a broken signature: sign here
+          # too, so CI checks exactly what a release produces.
+          CSC_FOR_PULL_REQUEST: 'true'
       - name: Inspect the app bundles
         run: |
           set -euo pipefail
@@ -97,6 +102,7 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
+          mkdir -p smoke
           open -n release/mac-arm64/GreekDir.app --args --user-data-dir="$RUNNER_TEMP/shot-profile"
           sleep 8
           screencapture -x smoke/screen.png
